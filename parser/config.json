@@ -1,0 +1,13 @@
+{
+    "API_KEYS": {
+        "User_1": {
+            "API_KEY": "63c21127231f78f62fed56624301fafd",
+            "USED_CREDIT": 100,
+            "MAX_CREDIT": 1500
+        }
+    },
+    "UPDATE": {
+        "LAST_CHECKING_DATE": "2025-09-21",
+        "NEXT_UPDATE": 30
+    }
+}
