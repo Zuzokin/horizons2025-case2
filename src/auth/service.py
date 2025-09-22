@@ -21,6 +21,7 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "197b2c37c391bed93fe80344fe73b806947a65e36206e05a1a23c2fa12702fe3")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+ALLOW_REGISTRATION = os.getenv("ALLOW_REGISTRATION", "true").lower() == "true"
 
 oauth2_bearer = OAuth2PasswordBearer(tokenUrl='auth/token')
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
@@ -62,6 +63,13 @@ def verify_token(token: str) -> models.TokenData:
 
 
 def register_user(db: Session, register_user_request: models.RegisterUserRequest) -> None:
+    if not ALLOW_REGISTRATION:
+        # Проверяем, есть ли уже пользователи в системе
+        user_count = db.query(User).count()
+        if user_count > 0:
+            logging.warning(f"Registration attempt when registration is disabled: {register_user_request.email}")
+            raise AuthenticationError("Registration is currently disabled")
+    
     try:
         create_user_model = User(
             id=uuid4(),
