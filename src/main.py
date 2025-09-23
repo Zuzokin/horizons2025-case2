@@ -19,7 +19,7 @@ app = FastAPI(
 )
 
 # Добавляем CORS middleware для работы с фронтендом
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://10.20.3.39:3000").split(",")
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://10.20.3.39:3000,http://10.20.3.134:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,

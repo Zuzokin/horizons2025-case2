@@ -5,6 +5,7 @@
 .env.local
 .env.production
 .env.staging
+env.prod
 
 # Python
 __pycache__/
@@ -50,9 +51,6 @@ env/
 *.log
 logs/
 
-# OS
-Thumbs.db
-
 # Frontend build artifacts
 frontend/build/
 frontend/dist/
@@ -83,3 +81,63 @@ frontend/.vuepress/dist/
 # Frontend coverage
 frontend/coverage/
 frontend/.nyc_output/
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Docker volumes and data
+postgres_data/
+app_logs/
+frontend_logs/
+parser_results/
+nginx_logs/
+
+# Parser specific files
+parser/results/
+parser/*.csv
+parser/*.html
+parser/*.json
+parser/cron.log
+parser/preprocessing_result.csv
+parser/23MET_DATA/
+parser/GoogleHTML/
+
+# Database files
+horizons.db
+*.db-journal
+
+# SSL certificates
+nginx/ssl/
+*.pem
+*.key
+*.crt
+
+# Temporary files
+*.tmp
+*.temp
+
+# IDE specific
+.vscode/settings.json
+.vscode/launch.json
+.idea/workspace.xml
+.idea/tasks.xml
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Test files
+test_*.json
+*_test.json

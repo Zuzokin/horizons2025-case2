@@ -1,18 +1,35 @@
 # Конфигурация для продакшена
 services:
   postgres:
+    image: postgres:15-alpine
+    container_name: horizons_postgres_prod
     environment:
       # Более строгие настройки для продакшена
       POSTGRES_DB: ${POSTGRES_DB:-horizons_db}
       POSTGRES_USER: ${POSTGRES_USER:-horizons_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
       # Используем именованные volumes для продакшена
       - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     # Убираем проброс портов для безопасности
     ports: []
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-horizons_user} -d ${POSTGRES_DB:-horizons_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - horizons_network
 
   app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: horizons_app_prod
     environment:
       # Переменные окружения из .env файла
       DATABASE_URL: ${DATABASE_URL}
@@ -24,30 +41,59 @@ services:
       PYTHONDONTWRITEBYTECODE: 1
     # Убираем проброс портов для безопасности
     ports: []
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
     volumes:
       # Только необходимые volumes для продакшена
       - ./parser:/app/parser:ro
+      - parser_results:/app/parser/results
       - app_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - horizons_network
 
   frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: production
+    container_name: horizons_frontend_prod
     environment:
       NODE_ENV: production
       REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:8000}
     # Убираем проброс портов для безопасности
     ports: []
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
     volumes:
       - frontend_logs:/var/log/nginx
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - horizons_network
 
 # Добавляем nginx reverse proxy для продакшена
   nginx:
     image: nginx:alpine
-    container_name: horizons_nginx
+    container_name: horizons_nginx_prod
     ports:
       - "80:80"
-      - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
       - nginx_logs:/var/log/nginx
     depends_on:
       - app
@@ -57,5 +103,20 @@ services:
       - horizons_network
 
 volumes:
+  postgres_data:
+    driver: local
+  app_logs:
+    driver: local
+  frontend_logs:
+    driver: local
+  parser_results:
+    driver: local
   nginx_logs:
     driver: local
+
+networks:
+  horizons_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
