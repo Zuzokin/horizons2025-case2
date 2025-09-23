@@ -161,15 +161,12 @@ export const getFilteredRecords = (
     gost: string;
   }
 ): RealMetalPricingRecord[] => {
-  return records.filter(record => {
-    if (filters.productType !== 'Все виды' && record['вид_продукции'] !== filters.productType) return false;
-    if (filters.warehouse !== 'Все склады' && record['склад'] !== filters.warehouse) return false;
-    if (filters.name && !record['наименование'].toLowerCase().includes(filters.name.toLowerCase())) return false;
-    if (filters.steelGrade !== 'Все марки' && record['марка_стали'] !== filters.steelGrade) return false;
-    if (filters.diameter !== 'Все диаметры' && record['диаметр'] !== filters.diameter) return false;
-    if (filters.gost !== 'Все ГОСТы' && record['ГОСТ'] !== filters.gost) return false;
-    return true;
-  });
+  console.log('🔍 getFilteredRecords called with', records.length, 'records');
+  console.log('🔍 Filters:', filters);
+  
+  // Временно возвращаем все записи для диагностики
+  console.log('🔍 TEMPORARY: Returning all records for debugging');
+  return records;
 };
 
 export const getAveragePrice = (records: RealMetalPricingRecord[]): number => {
@@ -191,9 +188,17 @@ export const getPriceRange = (records: RealMetalPricingRecord[]): { min: number,
 
 // Функция для обработки всех труб как проблемных (требующих мониторинга)
 export const getProblematicTubesFromRealData = (records: RealMetalPricingRecord[]): ProblematicTubeRecord[] => {
-  const avgPrice = getAveragePrice(records);
+  console.log('🔍 getProblematicTubesFromRealData called with', records.length, 'records');
   
-  return records.map((record, index) => {
+  // Временно показываем все записи для диагностики
+  console.log('🔍 TEMPORARY: Showing all records for debugging');
+  const tubeRecords = records;
+  
+  console.log('🔍 Filtered tube records:', tubeRecords.length);
+  
+  const avgPrice = getAveragePrice(tubeRecords);
+  
+  return tubeRecords.map((record, index) => {
     // Проверяем, что цена существует и является числом
     const price = record['цена'] || 0;
     const priceDiff = price - avgPrice;
@@ -236,5 +241,5 @@ export const getProblematicTubesFromRealData = (records: RealMetalPricingRecord[
       recommendation,
       priceDiffPercent
     };
-  }); // Убираем фильтр - показываем все трубы
+  });
 };

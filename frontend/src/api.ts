@@ -1,5 +1,5 @@
 // Импортируем динамическую конфигурацию API
-import { API_BASE, getApiConfig, API_ENDPOINTS, getCurrentEnvironment, testApiConnection, fetchWithTimeout } from './config/apiConfig';
+import { API_BASE, getApiConfig, API_ENDPOINTS, getCurrentEnvironment, fetchWithTimeout } from './config/apiConfig';
 
 // Логируем информацию о конфигурации
 console.log('🚀 API Configuration loaded:', {
@@ -156,6 +156,182 @@ export async function getPriceRecommendations(filters?: any) {
   }
 }
 
+// Новые API методы для работы с nginx маршрутами
+
+// Получить данные парсера
+export async function getParserData(filters?: any) {
+  try {
+    const config = getApiConfig();
+    const queryParams = filters ? new URLSearchParams(filters).toString() : '';
+    const url = `${API_BASE}/parser/data${queryParams ? `?${queryParams}` : ''}`;
+    
+    const res = await fetchWithTimeout(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+      mode: 'cors',
+    }, config.timeout);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('Parser API Error:', errorText);
+      throw new Error(`HTTP error! status: ${res.status}, message: ${errorText}`);
+    }
+    
+    const data = await res.json();
+    console.log('Parser data received:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching parser data:', error);
+    throw error;
+  }
+}
+
+// Получить данные ценообразования
+export async function getPricingData(filters?: any) {
+  try {
+    const config = getApiConfig();
+    const queryParams = filters ? new URLSearchParams(filters).toString() : '';
+    const url = `${API_BASE}/pricing/data${queryParams ? `?${queryParams}` : ''}`;
+    
+    const res = await fetchWithTimeout(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+      mode: 'cors',
+    }, config.timeout);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('Pricing API Error:', errorText);
+      throw new Error(`HTTP error! status: ${res.status}, message: ${errorText}`);
+    }
+    
+    const data = await res.json();
+    console.log('Pricing data received:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching pricing data:', error);
+    throw error;
+  }
+}
+
+// Получить статистику парсера
+export async function getParserStats() {
+  try {
+    const config = getApiConfig();
+    const url = `${API_BASE}/parser/stats`;
+    
+    const res = await fetchWithTimeout(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+      mode: 'cors',
+    }, config.timeout);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('Parser Stats API Error:', errorText);
+      throw new Error(`HTTP error! status: ${res.status}, message: ${errorText}`);
+    }
+    
+    const data = await res.json();
+    console.log('Parser stats received:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching parser stats:', error);
+    throw error;
+  }
+}
+
+// Получить аналитику ценообразования
+export async function getPricingAnalytics(filters?: any) {
+  try {
+    const config = getApiConfig();
+    const queryParams = filters ? new URLSearchParams(filters).toString() : '';
+    const url = `${API_BASE}/pricing/analytics${queryParams ? `?${queryParams}` : ''}`;
+    
+    const res = await fetchWithTimeout(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+      mode: 'cors',
+    }, config.timeout);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('Pricing Analytics API Error:', errorText);
+      throw new Error(`HTTP error! status: ${res.status}, message: ${errorText}`);
+    }
+    
+    const data = await res.json();
+    console.log('Pricing analytics received:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching pricing analytics:', error);
+    throw error;
+  }
+}
+
+// Применить рекомендацию по цене
+export async function applyPriceRecommendation(recommendationId: string) {
+  try {
+    const res = await fetch(`${API_BASE}/api/apply-recommendation/${recommendationId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return await res.json();
+  } catch (error) {
+    console.error('Error applying price recommendation:', error);
+    throw error;
+  }
+}
+
+// Обновить цену продукта
+export async function updateProductPrice(productData: {
+  product_id: string;
+  recommended_price: number;
+  reason: string;
+}) {
+  try {
+    const config = getApiConfig();
+    const res = await fetchWithTimeout(`${API_BASE}/api/products/update-price`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+      mode: 'cors',
+      body: JSON.stringify(productData),
+    }, config.timeout);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('API Error:', errorText);
+      throw new Error(`HTTP error! status: ${res.status}, message: ${errorText}`);
+    }
+    
+    const data = await res.json();
+    console.log('Product price updated:', data);
+    return data;
+  } catch (error) {
+    console.error('Error updating product price:', error);
+    throw error;
+  }
+}
+
 // ===== API для системы ценообразования =====
 
 // Получить рекомендацию по цене для одного продукта
@@ -284,23 +460,6 @@ export async function checkPricingHealth() {
     return await res.json();
   } catch (error) {
     console.error('Error checking pricing health:', error);
-    throw error;
-  }
-}
-
-// Применить рекомендацию по цене
-export async function applyPriceRecommendation(recommendationId: string) {
-  try {
-    const res = await fetch(`${API_BASE}/api/apply-recommendation/${recommendationId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-    return await res.json();
-  } catch (error) {
-    console.error('Error applying price recommendation:', error);
     throw error;
   }
 }

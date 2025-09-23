@@ -1,62 +1,65 @@
-const API_BASE = 'http://10.20.3.135:8000';
+// Импортируем динамическую конфигурацию API
+import { API_BASE } from '../config/apiConfig';
+
+const API_BASE_URL = API_BASE;
 
 export async function getContrpartnerByName(name: string) {
-  const res = await fetch(`${API_BASE}/GetContrpartnerByName?name=${encodeURIComponent(name)}`);
+  const res = await fetch(`${API_BASE_URL}/GetContrpartnerByName?name=${encodeURIComponent(name)}`);
   const data = await res.json();
   // Вернуть массив объектов value, если есть
   return Array.isArray(data) ? data.map(item => item.value) : [];
 }
 
 export async function getContrpartnerFirst() {
-  const res = await fetch(`${API_BASE}/GetContrpartnerFirst`);
+  const res = await fetch(`${API_BASE_URL}/GetContrpartnerFirst`);
   return await res.json();
 }
 
 export async function getTnsByContrpartner(id: number) {
-  const res = await fetch(`${API_BASE}/GetTnsByContrpartner?id=${id}`);
+  const res = await fetch(`${API_BASE_URL}/GetTnsByContrpartner?id=${id}`);
   return await res.json();
 }
 
 export async function getContrpartnerByInn(inn: string) {
-  const res = await fetch(`${API_BASE}/GetContrpartnerByInn?inn=${encodeURIComponent(inn)}`);
+  const res = await fetch(`${API_BASE_URL}/GetContrpartnerByInn?inn=${encodeURIComponent(inn)}`);
   const data = await res.json();
   return Array.isArray(data) ? data.map(item => item.value) : [];
 }
 
 export async function getTnsByMonths(id: number) {
-  const res = await fetch(`${API_BASE}/GetTnsByMonths?id=${id}`);
+  const res = await fetch(`${API_BASE_URL}/GetTnsByMonths?id=${id}`);
   return await res.json();
 }
 
 export async function getTnsBySuppliers(id: number) {
-  const res = await fetch(`${API_BASE}/GetTnsBySuppliers?id=${id}`);
+  const res = await fetch(`${API_BASE_URL}/GetTnsBySuppliers?id=${id}`);
   return await res.json();
 }
 
 export async function getAssortments(id: number) {
-  const res = await fetch(`${API_BASE}/GetAssortments?id=${id}`);
+  const res = await fetch(`${API_BASE_URL}/GetAssortments?id=${id}`);
   return await res.json();
 }
 
 export async function getSaleDocumentsByContrpartner(id: number) {
-  const res = await fetch(`${API_BASE}/GetSaleDocumentsByContrpartner?id=${id}`);
+  const res = await fetch(`${API_BASE_URL}/GetSaleDocumentsByContrpartner?id=${id}`);
   return await res.json();
 }
 
 export async function getFrequentlyAssortment(id: number) {
-  const res = await fetch(`${API_BASE}/GetFrequentlyAssortment?id=${id}`);
+  const res = await fetch(`${API_BASE_URL}/GetFrequentlyAssortment?id=${id}`);
   return await res.json();
 }
 
 export async function getFrequentlyAssortmentByContrpartner(id: number) {
-  const res = await fetch(`${API_BASE}/GetFrequentlyAssortmentByContrpartner?id=${id}`);
+  const res = await fetch(`${API_BASE_URL}/GetFrequentlyAssortmentByContrpartner?id=${id}`);
   const text = await res.text();
   if (!text) return [];
   return JSON.parse(text);
 }
 
 export async function getAprioriAssortment(id: number) {
-  const res = await fetch(`${API_BASE}/GetAssortmentApriori?id=${id}`);
+  const res = await fetch(`${API_BASE_URL}/GetAssortmentApriori?id=${id}`);
   const text = await res.text();
   if (!text) return [];
   return JSON.parse(text);
@@ -67,8 +70,8 @@ export async function getAprioriAssortment(id: number) {
 // Получить все данные о ценах на металлопродукцию
 export async function getMetalsPricingData(limit: number = 100, offset: number = 0) {
   try {
-    console.log(`Fetching data from: ${API_BASE}/csv-data/products-json?limit=${limit}&offset=${offset}`);
-    const res = await fetch(`${API_BASE}/csv-data/products-json?limit=${limit}&offset=${offset}`, {
+    console.log(`Fetching data from: ${API_BASE_URL}/csv-data/products-json?limit=${limit}&offset=${offset}`);
+    const res = await fetch(`${API_BASE_URL}/csv-data/products-json?limit=${limit}&offset=${offset}`, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -99,7 +102,7 @@ export async function getMetalsPricingData(limit: number = 100, offset: number =
 export async function getProblematicTubes(filters?: any) {
   try {
     const queryParams = filters ? new URLSearchParams(filters).toString() : '';
-    const url = `${API_BASE}/api/problematic-tubes${queryParams ? `?${queryParams}` : ''}`;
+    const url = `${API_BASE_URL}/api/problematic-tubes${queryParams ? `?${queryParams}` : ''}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     return await res.json();
@@ -112,7 +115,7 @@ export async function getProblematicTubes(filters?: any) {
 // Получить уведомления об активности конкурентов
 export async function getCompetitorNotifications() {
   try {
-    const res = await fetch(`${API_BASE}/api/competitor-notifications`);
+    const res = await fetch(`${API_BASE_URL}/api/competitor-notifications`);
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     return await res.json();
   } catch (error) {
@@ -124,7 +127,7 @@ export async function getCompetitorNotifications() {
 // Получить детальную аналитику по трубе
 export async function getTubeDetailAnalysis(tubeId: string) {
   try {
-    const res = await fetch(`${API_BASE}/api/tube-analysis/${tubeId}`);
+    const res = await fetch(`${API_BASE_URL}/api/tube-analysis/${tubeId}`);
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     return await res.json();
   } catch (error) {
@@ -137,7 +140,7 @@ export async function getTubeDetailAnalysis(tubeId: string) {
 export async function getPriceRecommendations(filters?: any) {
   try {
     const queryParams = filters ? new URLSearchParams(filters).toString() : '';
-    const url = `${API_BASE}/api/price-recommendations${queryParams ? `?${queryParams}` : ''}`;
+    const url = `${API_BASE_URL}/api/price-recommendations${queryParams ? `?${queryParams}` : ''}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     return await res.json();
@@ -150,7 +153,7 @@ export async function getPriceRecommendations(filters?: any) {
 // Применить рекомендацию по цене
 export async function applyPriceRecommendation(recommendationId: string) {
   try {
-    const res = await fetch(`${API_BASE}/api/apply-recommendation/${recommendationId}`, {
+    const res = await fetch(`${API_BASE_URL}/api/apply-recommendation/${recommendationId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -167,7 +170,7 @@ export async function applyPriceRecommendation(recommendationId: string) {
 // Проверить доступность API
 export async function checkApiHealth() {
   try {
-    const res = await fetch(`${API_BASE}/health`);
+    const res = await fetch(`${API_BASE_URL}/health`);
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     return await res.json();
   } catch (error) {
@@ -208,7 +211,7 @@ export interface UserResponse {
 export async function registerUser(userData: RegisterRequest): Promise<string> {
   try {
     console.log('Registering user:', userData.email);
-    const res = await fetch(`${API_BASE}/auth/`, {
+    const res = await fetch(`${API_BASE_URL}/auth/`, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -257,7 +260,7 @@ export async function loginUser(credentials: LoginRequest): Promise<TokenRespons
     formData.append('username', credentials.username);
     formData.append('password', credentials.password);
     
-    const res = await fetch(`${API_BASE}/auth/token`, {
+    const res = await fetch(`${API_BASE_URL}/auth/token`, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -299,7 +302,7 @@ export async function loginUser(credentials: LoginRequest): Promise<TokenRespons
 // Получить информацию о текущем пользователе
 export async function getCurrentUser(token: string): Promise<UserResponse> {
   try {
-    const res = await fetch(`${API_BASE}/users/me`, {
+    const res = await fetch(`${API_BASE_URL}/users/me`, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',

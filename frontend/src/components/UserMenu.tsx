@@ -7,15 +7,19 @@ import {
   Typography,
   Avatar,
   Divider,
-  ListItemIcon
+  ListItemIcon,
+  Badge
 } from '@mui/material';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import PersonIcon from '@mui/icons-material/Person';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 import { useAuth } from '../contexts/AuthContext';
+import CompetitorNotificationsModal from './CompetitorNotificationsModal';
 
 function UserMenu() {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const { user, logout } = useAuth();
   const open = Boolean(anchorEl);
 
@@ -32,6 +36,15 @@ function UserMenu() {
     handleClose();
   };
 
+  const handleNotificationsOpen = () => {
+    setNotificationsOpen(true);
+    handleClose(); // Закрываем меню пользователя
+  };
+
+  const handleNotificationsClose = () => {
+    setNotificationsOpen(false);
+  };
+
   const getUserInitials = () => {
     if (!user) return 'U';
     const firstName = user.first_name || '';
@@ -45,12 +58,29 @@ function UserMenu() {
   };
 
   return (
-    <Box>
+    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+      {/* Кнопка уведомлений */}
+      <IconButton
+        onClick={handleNotificationsOpen}
+        size="small"
+        sx={{
+          mr: 1,
+          '&:hover': {
+            bgcolor: 'rgba(245, 120, 56, 0.08)'
+          }
+        }}
+        aria-label="Уведомления конкурентов"
+      >
+        <Badge badgeContent={3} color="error" sx={{ '& .MuiBadge-badge': { fontSize: '0.7rem' } }}>
+          <NotificationsIcon sx={{ color: '#f57838', fontSize: 24 }} />
+        </Badge>
+      </IconButton>
+
+      {/* Аватар пользователя */}
       <IconButton
         onClick={handleClick}
         size="small"
         sx={{
-          ml: 2,
           '&:hover': {
             bgcolor: 'rgba(245, 120, 56, 0.08)'
           }
@@ -133,6 +163,12 @@ function UserMenu() {
           <Typography variant="body2">Выйти</Typography>
         </MenuItem>
       </Menu>
+
+      {/* Модальное окно уведомлений */}
+      <CompetitorNotificationsModal
+        open={notificationsOpen}
+        onClose={handleNotificationsClose}
+      />
     </Box>
   );
 }

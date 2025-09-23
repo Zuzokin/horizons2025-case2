@@ -1,11 +1,12 @@
-import React from 'react';
-import { Box, Typography, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button, Alert, AlertTitle, CircularProgress } from '@mui/material';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import { getPriceRecommendations, getCompetitorNotifications, applyPriceRecommendation } from '../api';
 
 interface FilterState {
   productType: string;
@@ -20,70 +21,96 @@ interface CompetitorPricesAndRecommendationsProps {
   filters: FilterState;
 }
 
-// Объединенные данные конкурентов и рекомендаций
-const mockCombinedData = [
-  {
-    id: 'C001',
-    product: 'Труба стальная ⌀57х3.5',
-    competitor: 'Северсталь',
-    competitorPrice: 76000,
-    competitorChange: '+1.0%',
-    competitorStatus: 'up',
-    currentPrice: 75000,
-    recommendedPrice: 74500,
-    change: -500,
-    percentage: '-0.67%',
-    reason: 'Высокие складские остатки, снижение спроса',
-    status: 'pending',
-  },
-  {
-    id: 'C002',
-    product: 'Труба профильная 60х40х2',
-    competitor: 'НЛМК',
-    competitorPrice: 81500,
-    competitorChange: '-0.2%',
-    competitorStatus: 'stable',
-    currentPrice: 82000,
-    recommendedPrice: 83000,
-    change: +1000,
-    percentage: '+1.22%',
-    reason: 'Рост цен у конкурентов, высокий спрос',
-    status: 'pending',
-  },
-  {
-    id: 'C003',
-    product: 'Труба бесшовная ⌀108х4',
-    competitor: 'ММК',
-    competitorPrice: 97000,
-    competitorChange: '+1.5%',
-    competitorStatus: 'up',
-    currentPrice: 95000,
-    recommendedPrice: 95000,
-    change: 0,
-    percentage: '0%',
-    reason: 'Стабильный рынок, оптимальная цена',
-    status: 'applied',
-  },
-  {
-    id: 'C004',
-    product: 'Труба электросварная ⌀76х3',
-    competitor: 'ЧТПЗ',
-    competitorPrice: 71000,
-    competitorChange: '+0.5%',
-    competitorStatus: 'stable',
-    currentPrice: 70000,
-    recommendedPrice: 70800,
-    change: +800,
-    percentage: '+1.14%',
-    reason: 'Сезонный рост спроса, низкие запасы',
-    status: 'pending',
-  },
-];
-
 function CompetitorPricesAndRecommendations({ filters }: CompetitorPricesAndRecommendationsProps) {
-  const handleApplyRecommendation = (id: string) => {
-    alert(`Применить рекомендацию для ${id}`);
-    // Здесь будет логика для отправки рекомендации на бэкенд или обновления состояния
+  const [combinedData, setCombinedData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Получаем рекомендации по ценам
+        const recommendations = await getPriceRecommendations(filters);
+        
+        // Получаем уведомления о конкурентах
+        const notifications = await getCompetitorNotifications();
+        
+        // Объединяем данные
+        const combined = recommendations.map((rec: any, index: number) => ({
+          id: rec.id || `REC${index + 1}`,
+          product: rec.product || rec.product_name || 'Неизвестный продукт',
+          competitor: rec.competitor || rec.competitor_name || 'Конкурент',
+          competitorPrice: rec.competitor_price || rec.competitorPrice || 0,
+          competitorChange: rec.competitor_change || rec.competitorChange || '0%',
+          competitorStatus: rec.competitor_status || rec.competitorStatus || 'stable',
+          currentPrice: rec.current_price || rec.currentPrice || 0,
+          recommendedPrice: rec.recommended_price || rec.recommendedPrice || 0,
+          change: rec.change || 0,
+          percentage: rec.percentage || '0%',
+          reason: rec.reason || rec.recommendation_reason || 'Нет данных',
+          status: rec.status || 'pending',
+        }));
+        
+        setCombinedData(combined);
+      } catch (err) {
+        console.error('Error fetching competitor data:', err);
+        setError('Ошибка загрузки данных о конкурентах');
+        
+        // Fallback к моковым данным при ошибке
+        const mockData = [
+          {
+            id: 'C001',
+            product: 'Труба стальная ⌀57х3.5',
+            competitor: 'Северсталь',
+            competitorPrice: 76000,
+            competitorChange: '+1.0%',
+            competitorStatus: 'up',
+            currentPrice: 75000,
+            recommendedPrice: 74500,
+            change: -500,
+            percentage: '-0.67%',
+            reason: 'Высокие складские остатки, снижение спроса',
+            status: 'pending',
+          },
+          {
+            id: 'C002',
+            product: 'Труба профильная 60х40х2',
+            competitor: 'НЛМК',
+            competitorPrice: 81500,
+            competitorChange: '-0.2%',
+            competitorStatus: 'stable',
+            currentPrice: 82000,
+            recommendedPrice: 83000,
+            change: +1000,
+            percentage: '+1.22%',
+            reason: 'Рост цен у конкурентов, высокий спрос',
+            status: 'pending',
+          },
+        ];
+        setCombinedData(mockData);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [filters]);
+
+  const handleApplyRecommendation = async (id: string) => {
+    try {
+      await applyPriceRecommendation(id);
+      // Обновляем статус в локальном состоянии
+      setCombinedData(prev => 
+        prev.map(item => 
+          item.id === id ? { ...item, status: 'applied' } : item
+        )
+      );
+    } catch (error) {
+      console.error('Error applying recommendation:', error);
+    }
   };
 
   const getActiveFiltersText = () => {
@@ -98,6 +125,17 @@ function CompetitorPricesAndRecommendations({ filters }: CompetitorPricesAndReco
     return activeFilters.length > 0 ? ` (${activeFilters.join(', ')})` : '';
   };
 
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <CircularProgress />
+        <Typography variant="h6" sx={{ ml: 2 }}>
+          Загрузка данных о конкурентах...
+        </Typography>
+      </Box>
+    );
+  }
+
   return (
     <Box>
       <Stack direction="row" alignItems="center" spacing={2} mb={4}>
@@ -107,8 +145,15 @@ function CompetitorPricesAndRecommendations({ filters }: CompetitorPricesAndReco
         </Typography>
       </Stack>
 
+      {error && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          <AlertTitle>Предупреждение</AlertTitle>
+          {error}. Используются демонстрационные данные.
+        </Alert>
+      )}
+
       <Typography variant="h6" sx={{ color: '#292929', fontWeight: 800, mb: 2 }}>
-        Сравнение цен и рекомендации по корректировке
+        Сравнение цен и рекомендации по корректировке ({combinedData.length} позиций)
       </Typography>
       <TableContainer component={Paper} sx={{ boxShadow: 3, borderRadius: 4, mb: 2 }}>
         <Table>
@@ -127,7 +172,7 @@ function CompetitorPricesAndRecommendations({ filters }: CompetitorPricesAndReco
             </TableRow>
           </TableHead>
           <TableBody>
-            {mockCombinedData.map((row) => (
+            {combinedData.map((row) => (
               <TableRow key={row.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                 <TableCell sx={{ color: '#292929', fontWeight: 700 }}>{row.product}</TableCell>
                 <TableCell sx={{ color: '#292929', fontWeight: 600 }}>{row.competitor}</TableCell>

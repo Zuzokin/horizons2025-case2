@@ -37,8 +37,8 @@ interface ServerConfigPanelProps {
 }
 
 function ServerConfigPanel({ onConfigChange }: ServerConfigPanelProps) {
-  const [serverIp, setServerIp] = useState('10.20.3.135');
-  const [serverPort, setServerPort] = useState('8000');
+  const [serverIp, setServerIp] = useState('localhost');
+  const [serverPort, setServerPort] = useState('80');
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'error'>('checking');
   const [editMode, setEditMode] = useState(false);
   const [tempIp, setTempIp] = useState('');
@@ -47,8 +47,8 @@ function ServerConfigPanel({ onConfigChange }: ServerConfigPanelProps) {
 
   useEffect(() => {
     // Загружаем сохраненную конфигурацию
-    const savedIp = localStorage.getItem('server_ip') || '10.20.3.135';
-    const savedPort = localStorage.getItem('server_port') || '8000';
+    const savedIp = localStorage.getItem('server_ip') || 'localhost';
+    const savedPort = localStorage.getItem('server_port') || '80';
     setServerIp(savedIp);
     setServerPort(savedPort);
     checkConnection();
@@ -263,7 +263,7 @@ function ServerConfigPanel({ onConfigChange }: ServerConfigPanelProps) {
               value={tempIp}
               onChange={(e) => setTempIp(e.target.value)}
               fullWidth
-              placeholder="10.20.3.135"
+              placeholder="localhost"
               helperText="Введите IP адрес сервера, на котором запущен бэкенд"
             />
             <TextField

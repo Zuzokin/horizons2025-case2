@@ -17,10 +17,13 @@ import ErrorIcon from '@mui/icons-material/Error';
 import CodeIcon from '@mui/icons-material/Code';
 import SettingsIcon from '@mui/icons-material/Settings';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import { API_BASE } from '../../config/apiConfig';
 
 function CorsErrorPanel() {
   const handleOpenSwagger = () => {
-    window.open('http://10.20.3.135:8000/docs', '_blank');
+    window.open(`${API_BASE}/docs`, '_blank');
   };
 
   return (
@@ -64,8 +67,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "http://10.20.3.39:3000",    # Ваш IP адрес
-        "http://10.20.3.135:3000"    # IP сервера
+        "http://localhost:3000",    # Локальная разработка
+        "http://localhost:80"       # Через nginx
     ],
     allow_credentials=True,
     allow_methods=["*"],

@@ -272,7 +272,13 @@ class CSVDataService:
         data = self._load_data()
         filtered_data = data.copy()
         
-        # Каскадная фильтрация
+        # Сначала фильтруем только трубы с нужными наименованиями
+        tube_mask = filtered_data['Наименование'].apply(
+            lambda name: self._is_valid_tube_product(str(name) if not pd.isna(name) else "")
+        )
+        filtered_data = filtered_data[tube_mask]
+        
+        # Затем применяем каскадную фильтрацию
         if filters.name:
             filtered_data = filtered_data[filtered_data['Наименование'].str.contains(filters.name, case=False, na=False)]
         
@@ -306,6 +312,41 @@ class CSVDataService:
             records=records
         )
     
+    def _determine_product_type(self, name: str) -> str:
+        """Определяет вид продукции на основе наименования"""
+        if not name:
+            return "Неизвестно"
+        
+        name_lower = name.lower()
+        
+        # Если наименование содержит "Труба б/ш г/д", то вид продукции "Труба б/ш г/д"
+        if "труба б/ш г/д" in name_lower:
+            return "Труба б/ш г/д"
+        
+        # Если наименование содержит "Труба ВГП", "Труба э/с магистральная", "Труба э/с", то вид продукции "Э/С"
+        if any(keyword in name_lower for keyword in ["труба вгп", "труба э/с магистральная", "труба э/с"]):
+            return "Э/С"
+        
+        # По умолчанию возвращаем исходное значение или "Неизвестно"
+        return "Неизвестно"
+    
+    def _is_valid_tube_product(self, name: str) -> bool:
+        """Проверяет, является ли продукт трубой с нужным наименованием"""
+        if not name:
+            return False
+        
+        name_lower = name.lower()
+        
+        # Проверяем, содержит ли наименование нужные ключевые слова
+        valid_keywords = [
+            "труба б/ш г/д",
+            "труба вгп", 
+            "труба э/с магистральная",
+            "труба э/с"
+        ]
+        
+        return any(keyword in name_lower for keyword in valid_keywords)
+
     def _row_to_product_record(self, row: pd.Series) -> ProductRecord:
         """Конвертирует строку DataFrame в ProductRecord"""
         def safe_get(key, default=None):
@@ -334,12 +375,15 @@ class CSVDataService:
         availability = "в наличии (50 т)"  # По умолчанию
         
         steel_grade = safe_get_str('Основная_марка')
-   
+        
+        # Получаем наименование для определения вида продукции
+        name = safe_get_str('Наименование')
+        product_type = self._determine_product_type(name)
         
         return ProductRecord(
-            вид_продукции=safe_get_str('Тип_продукции'),
+            вид_продукции=product_type,
             склад=city,
-            наименование=safe_get_str('Наименование'),
+            наименование=name,
             марка_стали=steel_grade,
             диаметр=safe_get_str('Размер'),
             ГОСТ=safe_get_str('ГОСТ'),
@@ -349,14 +393,31 @@ class CSVDataService:
             регион=region
         )
     
+    def _filter_by_product_type(self, data: pd.DataFrame, product_type_filter: str) -> pd.DataFrame:
+        """Фильтрует данные по виду продукции с учетом новой логики определения"""
+        if not product_type_filter:
+            return data
+        
+        # Создаем маску для фильтрации
+        mask = data['Наименование'].apply(
+            lambda name: self._determine_product_type(str(name) if name else "") == product_type_filter
+        )
+        return data[mask]
+
     def get_all_unique_values(self, filters: AllValuesFilterRequest) -> AllValuesResponse:
         """Возвращает все уникальные значения с каскадной фильтрацией"""
         data = self._load_data()
         filtered_data = data.copy()
         
+        # Сначала фильтруем только трубы с нужными наименованиями
+        tube_mask = filtered_data['Наименование'].apply(
+            lambda name: self._is_valid_tube_product(str(name) if not pd.isna(name) else "")
+        )
+        filtered_data = filtered_data[tube_mask]
+        
         # Применяем каскадную фильтрацию
         if filters.вид_продукции:
-            filtered_data = filtered_data[filtered_data['Тип_продукции'].str.contains(filters.вид_продукции, case=False, na=False)]
+            filtered_data = self._filter_by_product_type(filtered_data, filters.вид_продукции)
         
         if filters.склад:
             filtered_data = filtered_data[filtered_data['Город'].str.contains(filters.склад, case=False, na=False)]
@@ -381,8 +442,18 @@ class CSVDataService:
             values.sort()
             return values
         
+        # Для вида продукции используем новую логику определения
+        def get_unique_product_types() -> list[str]:
+            product_types = set()
+            for _, row in filtered_data.iterrows():
+                name = str(row.get('Наименование', '')) if not pd.isna(row.get('Наименование')) else ''
+                product_type = self._determine_product_type(name)
+                if product_type and product_type != "Неизвестно":
+                    product_types.add(product_type)
+            return sorted(list(product_types))
+        
         return AllValuesResponse(
-            вид_продукции=get_unique_values('Тип_продукции'),
+            вид_продукции=get_unique_product_types(),
             склад=get_unique_values('Город'),
             наименование=get_unique_values('Наименование'),
             марка=get_unique_values('Основная_марка'),
@@ -395,9 +466,15 @@ class CSVDataService:
         data = self._load_data()
         filtered_data = data.copy()
         
+        # Сначала фильтруем только трубы с нужными наименованиями
+        tube_mask = filtered_data['Наименование'].apply(
+            lambda name: self._is_valid_tube_product(str(name) if not pd.isna(name) else "")
+        )
+        filtered_data = filtered_data[tube_mask]
+        
         # Применяем каскадную фильтрацию
         if filters.вид_продукции:
-            filtered_data = filtered_data[filtered_data['Тип_продукции'].str.contains(filters.вид_продукции, case=False, na=False)]
+            filtered_data = self._filter_by_product_type(filtered_data, filters.вид_продукции)
         
         if filters.склад:
             filtered_data = filtered_data[filtered_data['Город'].str.contains(filters.склад, case=False, na=False)]
@@ -427,11 +504,21 @@ class CSVDataService:
         if field not in field_mapping:
             raise ValueError(f"Неизвестное поле: {field}")
         
-        column_name = field_mapping[field]
-        values = filtered_data[column_name].dropna().unique().tolist()
-        # Преобразуем в строки и убираем пустые значения
-        values = [str(v).strip() for v in values if str(v).strip() and str(v).strip() != 'nan']
-        values.sort()
+        # Специальная обработка для поля "вид_продукции"
+        if field == 'вид_продукции':
+            product_types = set()
+            for _, row in filtered_data.iterrows():
+                name = str(row.get('Наименование', '')) if not pd.isna(row.get('Наименование')) else ''
+                product_type = self._determine_product_type(name)
+                if product_type and product_type != "Неизвестно":
+                    product_types.add(product_type)
+            values = sorted(list(product_types))
+        else:
+            column_name = field_mapping[field]
+            values = filtered_data[column_name].dropna().unique().tolist()
+            # Преобразуем в строки и убираем пустые значения
+            values = [str(v).strip() for v in values if str(v).strip() and str(v).strip() != 'nan']
+            values.sort()
         
         return UniqueValuesResponse(values=values, field=field)
     
@@ -441,10 +528,11 @@ class CSVDataService:
         products = []
         
         for _, row in data.iterrows():
+            name = str(row.get('Наименование', '')) if not pd.isna(row.get('Наименование')) else ''
             product_dict = {
-                "вид_продукции": str(row.get('Тип_продукции', '')),
+                "вид_продукции": self._determine_product_type(name),
                 "склад": str(row.get('Город', '')),
-                "наименование": str(row.get('Наименование', '')),
+                "наименование": name,
                 "марка_стали": str(row.get('Основная_марка', '')),
                 "диаметр": str(row.get('Размер', '')),
                 "ГОСТ": str(row.get('ГОСТ', '')),

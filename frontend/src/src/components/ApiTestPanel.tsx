@@ -15,6 +15,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import { testApiConnection, openSwagger } from '../utils/apiTest';
+import { API_BASE } from '../../config/apiConfig';
 
 function ApiTestPanel() {
   const [isLoading, setIsLoading] = useState(false);
@@ -53,7 +54,7 @@ function ApiTestPanel() {
 
       <Stack spacing={2}>
         <Typography variant="body2" sx={{ color: '#616161' }}>
-          Базовый URL: <strong>http://10.20.3.135:8000</strong>
+          Базовый URL: <strong>{API_BASE}</strong>
         </Typography>
 
         <Stack direction="row" spacing={2}>

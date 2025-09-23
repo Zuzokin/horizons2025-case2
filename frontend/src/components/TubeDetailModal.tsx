@@ -26,10 +26,10 @@ function TubeDetailModal({ open, onClose, tubeData }: TubeDetailModalProps) {
 
   // Создаем фильтры для аналитики на основе выбранной трубы
   const tubeFilters = {
-    productType: tubeData['вид продукции'] || 'Все виды',
+    productType: tubeData['вид_продукции'] || 'Все виды',
     warehouse: tubeData['склад'] || 'Все склады',
     name: tubeData['наименование'] || '',
-    steelGrade: tubeData['марка стали'] || 'Все марки',
+    steelGrade: tubeData['марка_стали'] || 'Все марки',
     diameter: tubeData['диаметр'] || 'Все диаметры',
     gost: tubeData['ГОСТ'] || 'Все ГОСТы'
   };
@@ -57,7 +57,7 @@ function TubeDetailModal({ open, onClose, tubeData }: TubeDetailModalProps) {
                 Детальный анализ трубы
               </Typography>
               <Typography variant="body1" sx={{ color: '#616161', mt: 0.5 }}>
-                {tubeData['наименование']}
+                {tubeData['наименование']} - {tubeData['диаметр']} мм
               </Typography>
             </Box>
           </Stack>
@@ -76,7 +76,7 @@ function TubeDetailModal({ open, onClose, tubeData }: TubeDetailModalProps) {
       <Divider />
 
       <DialogContent sx={{ p: 3, maxHeight: '70vh', overflow: 'auto' }}>
-        <TubeMarketOverview filters={tubeFilters} />
+        <TubeMarketOverview filters={tubeFilters} tubeData={tubeData} />
       </DialogContent>
 
       <DialogActions sx={{ p: 3, bgcolor: '#f8f8f8' }}>

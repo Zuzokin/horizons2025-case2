@@ -40,9 +40,11 @@ export async function testApiConnection() {
   }
 }
 
+// Импортируем динамическую конфигурацию API
+import { API_BASE } from '../../config/apiConfig';
+
 // Функция для получения информации о Swagger
 export function getSwaggerUrl() {
-  const API_BASE = 'http://10.20.3.135:8000';
   return `${API_BASE}/docs`;
 }
 

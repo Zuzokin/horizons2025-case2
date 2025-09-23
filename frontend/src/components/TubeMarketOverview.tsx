@@ -1,5 +1,5 @@
-import React from 'react';
-import { Box, Typography, Paper, Stack, Card, CardContent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, Paper, Stack, Card, CardContent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button, CircularProgress, Alert, AlertTitle } from '@mui/material';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
@@ -9,7 +9,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
-import { metalsPricingData, getFilteredRecords } from '../data/metalsPricingData';
+import { getMarketData, getPriceRecommendation } from '../api';
 
 interface FilterState {
   productType: string;
@@ -22,6 +22,7 @@ interface FilterState {
 
 interface TubeMarketOverviewProps {
   filters: FilterState;
+  tubeData?: any; // Добавляем данные о трубе для получения рекомендаций
 }
 
 // Единые данные для конкурентов
@@ -70,7 +71,143 @@ const mockPriceData = [
   { name: 'Июн', ТМК: 75000, Северсталь: 76000, НЛМК: 74500, ММК: 78000 },
 ];
 
-function TubeMarketOverview({ filters }: TubeMarketOverviewProps) {
+function TubeMarketOverview({ filters, tubeData }: TubeMarketOverviewProps) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [marketData, setMarketData] = useState<any>(null);
+  const [competitorData, setCompetitorData] = useState<any[]>([]);
+  const [priceData, setPriceData] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadMarketData();
+  }, [filters, tubeData]);
+
+  const loadMarketData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Загружаем рыночные данные
+      const market = await getMarketData();
+      setMarketData(market);
+
+      // Формируем данные конкурентов из рыночных данных
+      if (market.competitors) {
+        const competitors = market.competitors.map((comp: any, index: number) => ({
+          id: comp.id || `competitor_${index}`,
+          name: comp.name || 'Неизвестно',
+          currentPrice: comp.price || 0,
+          change: comp.change || '0%',
+          status: comp.status || 'competitor',
+          recommendation: comp.recommendation || 'Нет рекомендации'
+        }));
+        setCompetitorData(competitors);
+      } else {
+        // Fallback к моковым данным если нет реальных
+        setCompetitorData([
+          {
+            id: 'TMK',
+            name: 'ТМК',
+            currentPrice: 75000,
+            change: '-0.67%',
+            status: 'current',
+            recommendation: 'Рассмотреть снижение цены'
+          },
+          {
+            id: 'SEVERSTAL',
+            name: 'Северсталь',
+            currentPrice: 76000,
+            change: '+1.0%',
+            status: 'competitor',
+            recommendation: 'Цена выше рыночной'
+          },
+          {
+            id: 'NLMK',
+            name: 'НЛМК',
+            currentPrice: 74500,
+            change: '-0.2%',
+            status: 'competitor',
+            recommendation: 'Конкурентное преимущество'
+          },
+          {
+            id: 'MMK',
+            name: 'ММК',
+            currentPrice: 78000,
+            change: '+1.5%',
+            status: 'competitor',
+            recommendation: 'Цена значительно выше'
+          }
+        ]);
+      }
+
+      // Формируем данные для графика
+      if (market.price_history) {
+        setPriceData(market.price_history);
+      } else {
+        // Fallback к моковым данным
+        setPriceData([
+          { name: 'Янв', ТМК: 72000, Северсталь: 75000, НЛМК: 73000, ММК: 78000 },
+          { name: 'Фев', ТМК: 73500, Северсталь: 76000, НЛМК: 74000, ММК: 79000 },
+          { name: 'Мар', ТМК: 74000, Северсталь: 76500, НЛМК: 74200, ММК: 80000 },
+          { name: 'Апр', ТМК: 74500, Северсталь: 76800, НЛМК: 74400, ММК: 80500 },
+          { name: 'Май', ТМК: 74800, Северсталь: 76900, НЛМК: 74450, ММК: 80800 },
+          { name: 'Июн', ТМК: 75000, Северсталь: 76000, НЛМК: 74500, ММК: 78000 }
+        ]);
+      }
+
+    } catch (err) {
+      console.error('Error loading market data:', err);
+      setError(`Ошибка загрузки данных: ${err instanceof Error ? err.message : 'Неизвестная ошибка'}`);
+      
+      // Fallback к моковым данным при ошибке
+      setCompetitorData([
+        {
+          id: 'TMK',
+          name: 'ТМК',
+          currentPrice: 75000,
+          change: '-0.67%',
+          status: 'current',
+          recommendation: 'Рассмотреть снижение цены'
+        },
+        {
+          id: 'SEVERSTAL',
+          name: 'Северсталь',
+          currentPrice: 76000,
+          change: '+1.0%',
+          status: 'competitor',
+          recommendation: 'Цена выше рыночной'
+        },
+        {
+          id: 'NLMK',
+          name: 'НЛМК',
+          currentPrice: 74500,
+          change: '-0.2%',
+          status: 'competitor',
+          recommendation: 'Конкурентное преимущество'
+        },
+        {
+          id: 'MMK',
+          name: 'ММК',
+          currentPrice: 78000,
+          change: '+1.5%',
+          status: 'competitor',
+          recommendation: 'Цена значительно выше'
+        }
+      ]);
+      
+      setPriceData([
+        { name: 'Янв', ТМК: 72000, Северсталь: 75000, НЛМК: 73000, ММК: 78000 },
+        { name: 'Фев', ТМК: 73500, Северсталь: 76000, НЛМК: 74000, ММК: 79000 },
+        { name: 'Мар', ТМК: 74000, Северсталь: 76500, НЛМК: 74200, ММК: 80000 },
+        { name: 'Апр', ТМК: 74500, Северсталь: 76800, НЛМК: 74400, ММК: 80500 },
+        { name: 'Май', ТМК: 74800, Северсталь: 76900, НЛМК: 74450, ММК: 80800 },
+        { name: 'Июн', ТМК: 75000, Северсталь: 76000, НЛМК: 74500, ММК: 78000 }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getActiveFiltersText = () => {
     const activeFilters = [];
     if (filters.productType !== 'Все виды') activeFilters.push(filters.productType);
@@ -83,10 +220,59 @@ function TubeMarketOverview({ filters }: TubeMarketOverviewProps) {
     return activeFilters.length > 0 ? ` (${activeFilters.join(', ')})` : '';
   };
 
+  const handleApplyRecommendation = async (id: string) => {
+    if (!tubeData) {
+      alert('Нет данных о трубе для применения рекомендации');
+      return;
+    }
 
-  const handleApplyRecommendation = (id: string) => {
-    alert(`Применить рекомендацию для ${id}`);
+    try {
+      const recommendation = await getPriceRecommendation({
+        вид_продукции: tubeData['вид_продукции'] || 'труба',
+        склад: tubeData['склад'] || 'Москва',
+        наименование: tubeData['наименование'] || '',
+        марка_стали: tubeData['марка_стали'] || 'Ст3',
+        диаметр: tubeData['диаметр'] || '',
+        ГОСТ: tubeData['ГОСТ'] || '',
+        цена: tubeData['цена'] || 0,
+        производитель: tubeData['производитель'] || 'Неизвестно',
+        регион: tubeData['регион'] || 'Москва'
+      });
+
+      alert(`Рекомендация применена для ${id}. Новая цена: ${recommendation.decision?.new_price || 'N/A'} ₽/т`);
+    } catch (err) {
+      console.error('Error applying recommendation:', err);
+      alert(`Ошибка применения рекомендации: ${err instanceof Error ? err.message : 'Неизвестная ошибка'}`);
+    }
   };
+
+  // Вычисляем среднюю цену рынка
+  const averageMarketPrice = competitorData.length > 0 
+    ? Math.round(competitorData.reduce((sum, comp) => sum + comp.currentPrice, 0) / competitorData.length)
+    : 76500;
+
+  // Вычисляем объем складских остатков (моковые данные)
+  const stockVolume = marketData?.stock_volume || 15200;
+
+  // Вычисляем активность конкурентов
+  const competitorActivity = competitorData.filter(comp => comp.change !== '0%').length;
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert severity="error" sx={{ m: 2 }}>
+        <AlertTitle>Ошибка загрузки данных</AlertTitle>
+        {error}
+      </Alert>
+    );
+  }
 
   return (
     <Box>
@@ -98,7 +284,7 @@ function TubeMarketOverview({ filters }: TubeMarketOverviewProps) {
             <AttachMoneyIcon sx={{ fontSize: 20 }} />
             <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.8rem' }}>Средняя цена по рынку</Typography>
           </Stack>
-          <Typography variant="h5" sx={{ fontWeight: 800, mb: 0.5 }}>76 500 ₽/т</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 800, mb: 0.5 }}>{averageMarketPrice.toLocaleString()} ₽/т</Typography>
           <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.7rem' }}>+1.2% за неделю</Typography>
         </Card>
         <Card sx={{ flex: 1, p: 1.5, borderRadius: 3, boxShadow: 2, bgcolor: '#292929', color: '#fff' }}>
@@ -106,7 +292,7 @@ function TubeMarketOverview({ filters }: TubeMarketOverviewProps) {
             <StoreIcon sx={{ fontSize: 20 }} />
             <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.8rem' }}>Объем складских остатков</Typography>
           </Stack>
-          <Typography variant="h5" sx={{ fontWeight: 800, mb: 0.5 }}>15 200 т</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 800, mb: 0.5 }}>{stockVolume.toLocaleString()} т</Typography>
           <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.7rem' }}>-0.5% за неделю</Typography>
         </Card>
         <Card sx={{ flex: 1, p: 1.5, borderRadius: 3, boxShadow: 2, bgcolor: '#c8c8c8', color: '#292929' }}>
@@ -114,8 +300,12 @@ function TubeMarketOverview({ filters }: TubeMarketOverviewProps) {
             <PeopleIcon sx={{ fontSize: 20 }} />
             <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.8rem' }}>Активность конкурентов</Typography>
           </Stack>
-          <Typography variant="h5" sx={{ fontWeight: 800, mb: 0.5 }}>Высокая</Typography>
-          <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.7rem' }}>3 изменения за 24ч</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 800, mb: 0.5 }}>
+            {competitorActivity > 2 ? 'Высокая' : competitorActivity > 0 ? 'Средняя' : 'Низкая'}
+          </Typography>
+          <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.7rem' }}>
+            {competitorActivity} изменений за 24ч
+          </Typography>
         </Card>
       </Stack>
 
