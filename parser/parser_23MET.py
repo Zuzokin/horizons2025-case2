@@ -34,7 +34,7 @@ class ParserSite_23MET(Parser):
                                                  time_period= time_period)
         self.__filter_keywords = filter_keywords or []
         self.__filter_mode = filter_mode
-        DIR_NAME = "23MET_DATA"
+        DIR_NAME = "results"
         os.makedirs(DIR_NAME, exist_ok=True)
         self._dir_path = os.path.join(os.getcwd(), DIR_NAME) 
         self.__file_paths = None

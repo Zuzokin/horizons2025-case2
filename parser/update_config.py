@@ -51,5 +51,10 @@ def change_update_config_json(file_path: str) -> None:
 
     json_[UPDATE][LAST_CHECKING_DATE] = today_str
     
-    with open(file_path, 'w', encoding='utf-8') as file:
-        json.dump(json_, file, indent=4, ensure_ascii= False) 
+    try:
+        with open(file_path, 'w', encoding='utf-8') as file:
+            json.dump(json_, file, indent=4, ensure_ascii= False)
+    except PermissionError:
+        print(f"Предупреждение: Не удалось записать в файл {file_path} (read-only). Продолжаем без обновления конфигурации.")
+    except Exception as e:
+        print(f"Ошибка при записи файла {file_path}: {e}") 

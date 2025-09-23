@@ -13,6 +13,7 @@ class Token(BaseModel):
     
 class TokenData(BaseModel):
     user_id: str | None = None
+    email: str | None = None
 
     def get_uuid(self) -> UUID | None:
         if self.user_id:

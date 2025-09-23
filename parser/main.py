@@ -48,12 +48,12 @@ async def main(with_proxy=False):
                               with_remove_intermediate_data=False)
 
     # Проверяем, есть ли данные для обработки
-    result_file = os.path.join(os.getcwd(), '23MET_DATA', 'result.csv')
+    result_file = os.path.join(os.getcwd(), 'results', 'result.csv')
     if os.path.exists(result_file) and os.path.getsize(result_file) > 0:
         print("Начинаю предобработку данных")
         preprocessor = PreProcessor(csv_file_path=result_file)
         
-        preprocessing_file = os.path.join(os.getcwd(), '23MET_DATA', 'preprocessing_result.csv')
+        preprocessing_file = os.path.join(os.getcwd(), 'results', 'preprocessing_result.csv')
         print("Закончился препроцессинг. начинаю сохранять структурированные данные по пути:", preprocessing_file)
         preprocessor.save_data(path=preprocessing_file)
         

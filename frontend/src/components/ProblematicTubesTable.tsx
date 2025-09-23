@@ -84,6 +84,7 @@ function ProblematicTubesTable({ onTubeSelect, filters }: ProblematicTubesTableP
   
   const problematicTubes: ProblematicTubeRecord[] = getProblematicTubesFromRealData(filteredRecords);
 
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'high':

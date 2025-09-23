@@ -1,12 +1,13 @@
 import React from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import PriceMonitoringDashboard from './components/PriceMonitoringDashboard';
 import AuthPage from './components/AuthPage';
 import WelcomeScreen from './components/WelcomeScreen';
+import PriceMonitoringDashboard from './components/PriceMonitoringDashboard';
 import { Box, CircularProgress } from '@mui/material';
 
 function AppContent() {
   const { isAuthenticated, isLoading, showWelcome } = useAuth();
+
 
   if (isLoading) {
     return (

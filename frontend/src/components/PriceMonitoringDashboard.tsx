@@ -8,11 +8,15 @@ import ProductFilters from './ProductFilters';
 import ProblematicTubesTable from './ProblematicTubesTable';
 import TubeDetailModal from './TubeDetailModal';
 import CompetitorNotifications from './CompetitorNotifications';
+import ApiConfigPanel from './ApiConfigPanel';
+import ServerConfigPanel from './ServerConfigPanel';
 import UserMenu from './UserMenu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
+import SettingsIcon from '@mui/icons-material/Settings';
+import ComputerIcon from '@mui/icons-material/Computer';
 
 interface FilterState {
   productType: string;
@@ -33,8 +37,9 @@ function PriceMonitoringDashboard() {
     diameter: 'Все диаметры',
     gost: 'Все ГОСТы'
   });
-  const [selectedTube, setSelectedTube] = useState<any>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [selectedTube, setSelectedTube] = useState<any>(null);
+
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
@@ -44,8 +49,8 @@ function PriceMonitoringDashboard() {
     setFilters(newFilters);
   };
 
-  const handleTubeSelect = (tubeData: any) => {
-    setSelectedTube(tubeData);
+  const handleTubeSelect = (tube: any) => {
+    setSelectedTube(tube);
     setModalOpen(true);
   };
 
@@ -70,7 +75,6 @@ function PriceMonitoringDashboard() {
         <Tabs
           value={currentTab}
           onChange={handleTabChange}
-          indicatorColor="primary"
           textColor="primary"
           variant="scrollable"
           scrollButtons="auto"
@@ -81,6 +85,8 @@ function PriceMonitoringDashboard() {
           <Tab label="Аналитика цен" icon={<AnalyticsIcon />} iconPosition="start" />
           <Tab label="Мониторинг конкурентов" icon={<CompareArrowsIcon />} iconPosition="start" />
           <Tab label="Рекомендации по ценам" icon={<LightbulbIcon />} iconPosition="start" />
+          <Tab label="Настройки сервера" icon={<ComputerIcon />} iconPosition="start" />
+          <Tab label="Настройки API" icon={<SettingsIcon />} iconPosition="start" />
         </Tabs>
 
         {currentTab === 0 && (
@@ -90,12 +96,14 @@ function PriceMonitoringDashboard() {
             <ProblematicTubesTable onTubeSelect={handleTubeSelect} filters={filters} />
           </>
         )}
-        {currentTab !== 0 && <ProductFilters onFiltersChange={handleFiltersChange} />}
+        {currentTab !== 0 && currentTab !== 5 && currentTab !== 6 && <ProductFilters onFiltersChange={handleFiltersChange} />}
         
         {currentTab === 1 && <MarketOverview filters={filters} />}
         {currentTab === 2 && <PriceAnalytics filters={filters} />}
         {currentTab === 3 && <CompetitorMonitoring filters={filters} />}
         {currentTab === 4 && <PriceRecommendations filters={filters} />}
+        {currentTab === 5 && <ServerConfigPanel />}
+        {currentTab === 6 && <ApiConfigPanel />}
 
       </Paper>
 

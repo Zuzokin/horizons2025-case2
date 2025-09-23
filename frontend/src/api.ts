@@ -1,4 +1,12 @@
-const API_BASE = 'http://10.20.3.135:8000';
+// Импортируем динамическую конфигурацию API
+import { API_BASE, getApiConfig, API_ENDPOINTS, getCurrentEnvironment, testApiConnection, fetchWithTimeout } from './config/apiConfig';
+
+// Логируем информацию о конфигурации
+console.log('🚀 API Configuration loaded:', {
+  baseUrl: API_BASE,
+  environment: getCurrentEnvironment(),
+  endpoints: API_ENDPOINTS
+});
 
 export async function getContrpartnerByName(name: string) {
   const res = await fetch(`${API_BASE}/GetContrpartnerByName?name=${encodeURIComponent(name)}`);
@@ -68,14 +76,15 @@ export async function getAprioriAssortment(id: number) {
 export async function getMetalsPricingData(limit: number = 100, offset: number = 0) {
   try {
     console.log(`Fetching data from: ${API_BASE}/csv-data/products-json?limit=${limit}&offset=${offset}`);
-    const res = await fetch(`${API_BASE}/csv-data/products-json?limit=${limit}&offset=${offset}`, {
+    const config = getApiConfig();
+    const res = await fetchWithTimeout(`${API_BASE}${API_ENDPOINTS.PRODUCTS.LIST}?limit=${limit}&offset=${offset}`, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
       mode: 'cors',
-    });
+    }, config.timeout);
     
     console.log('Response status:', res.status);
     console.log('Response headers:', res.headers);
@@ -147,6 +156,138 @@ export async function getPriceRecommendations(filters?: any) {
   }
 }
 
+// ===== API для системы ценообразования =====
+
+// Получить рекомендацию по цене для одного продукта
+export async function getPriceRecommendation(productData: any) {
+  try {
+    const config = getApiConfig();
+    const res = await fetchWithTimeout(`${API_BASE}/api/pricing/recommend`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+      mode: 'cors',
+      body: JSON.stringify(productData),
+    }, config.timeout);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('API Error:', errorText);
+      throw new Error(`HTTP error! status: ${res.status}, message: ${errorText}`);
+    }
+    
+    const data = await res.json();
+    console.log('Price recommendation received:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching price recommendation:', error);
+    throw error;
+  }
+}
+
+// Получить рекомендации по ценам для нескольких продуктов
+export async function getBulkPriceRecommendations(products: any[]) {
+  try {
+    const config = getApiConfig();
+    const res = await fetchWithTimeout(`${API_BASE}/api/pricing/recommend/bulk`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+      mode: 'cors',
+      body: JSON.stringify({ products }),
+    }, config.timeout);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('API Error:', errorText);
+      throw new Error(`HTTP error! status: ${res.status}, message: ${errorText}`);
+    }
+    
+    const data = await res.json();
+    console.log('Bulk price recommendations received:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching bulk price recommendations:', error);
+    throw error;
+  }
+}
+
+// Получить рыночные данные
+export async function getMarketData() {
+  try {
+    const config = getApiConfig();
+    const res = await fetchWithTimeout(`${API_BASE}/api/pricing/market-data`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+      mode: 'cors',
+    }, config.timeout);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('API Error:', errorText);
+      throw new Error(`HTTP error! status: ${res.status}, message: ${errorText}`);
+    }
+    
+    const data = await res.json();
+    console.log('Market data received:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching market data:', error);
+    throw error;
+  }
+}
+
+// Обновить рыночные данные
+export async function updateMarketData(marketData: any) {
+  try {
+    const config = getApiConfig();
+    const res = await fetchWithTimeout(`${API_BASE}/api/pricing/market-data/update`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+      mode: 'cors',
+      body: JSON.stringify({ market_history: marketData }),
+    }, config.timeout);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('API Error:', errorText);
+      throw new Error(`HTTP error! status: ${res.status}, message: ${errorText}`);
+    }
+    
+    const data = await res.json();
+    console.log('Market data updated:', data);
+    return data;
+  } catch (error) {
+    console.error('Error updating market data:', error);
+    throw error;
+  }
+}
+
+// Проверить работоспособность сервиса ценообразования
+export async function checkPricingHealth() {
+  try {
+    const res = await fetch(`${API_BASE}/api/pricing/health`);
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return await res.json();
+  } catch (error) {
+    console.error('Error checking pricing health:', error);
+    throw error;
+  }
+}
+
 // Применить рекомендацию по цене
 export async function applyPriceRecommendation(recommendationId: string) {
   try {
@@ -208,7 +349,8 @@ export interface UserResponse {
 export async function registerUser(userData: RegisterRequest): Promise<string> {
   try {
     console.log('Registering user:', userData.email);
-    const res = await fetch(`${API_BASE}/auth/`, {
+    const config = getApiConfig();
+    const res = await fetchWithTimeout(`${API_BASE}${API_ENDPOINTS.AUTH.REGISTER}`, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -217,7 +359,7 @@ export async function registerUser(userData: RegisterRequest): Promise<string> {
       mode: 'cors',
       credentials: 'omit',
       body: JSON.stringify(userData),
-    });
+    }, config.timeout);
     
     console.log('Registration response status:', res.status);
     console.log('Registration response headers:', res.headers);
@@ -257,7 +399,8 @@ export async function loginUser(credentials: LoginRequest): Promise<TokenRespons
     formData.append('username', credentials.username);
     formData.append('password', credentials.password);
     
-    const res = await fetch(`${API_BASE}/auth/token`, {
+    const config = getApiConfig();
+    const res = await fetchWithTimeout(`${API_BASE}${API_ENDPOINTS.AUTH.LOGIN}`, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -266,7 +409,7 @@ export async function loginUser(credentials: LoginRequest): Promise<TokenRespons
       mode: 'cors',
       credentials: 'omit',
       body: formData,
-    });
+    }, config.timeout);
     
     console.log('Login response status:', res.status);
     console.log('Login response headers:', res.headers);
@@ -299,13 +442,14 @@ export async function loginUser(credentials: LoginRequest): Promise<TokenRespons
 // Получить информацию о текущем пользователе
 export async function getCurrentUser(token: string): Promise<UserResponse> {
   try {
-    const res = await fetch(`${API_BASE}/users/me`, {
+    const config = getApiConfig();
+    const res = await fetchWithTimeout(`${API_BASE}${API_ENDPOINTS.AUTH.USER_INFO}`, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-    });
+    }, config.timeout);
     
     if (!res.ok) {
       const errorText = await res.text();

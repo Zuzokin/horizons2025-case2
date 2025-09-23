@@ -214,3 +214,26 @@ async def get_unique_values_by_field_post(field: str, filters: AllValuesFilterRe
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка получения данных: {str(e)}")
+
+
+@router.post("/refresh")
+async def refresh_csv_data():
+    """
+    Обновляет данные, загружая последний доступный CSV файл из папки results.
+    """
+    try:
+        csv_service.refresh_data()
+        return {"message": "Данные успешно обновлены", "file_path": csv_service.csv_file_path}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка обновления данных: {str(e)}")
+
+
+@router.get("/current-file")
+async def get_current_csv_file():
+    """
+    Возвращает путь к текущему используемому CSV файлу.
+    """
+    try:
+        return {"file_path": csv_service.csv_file_path}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка получения информации о файле: {str(e)}")

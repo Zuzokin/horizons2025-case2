@@ -43,6 +43,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./parser:/app/parser:ro
+      - parser_results:/app/parser/results
       - app_logs:/app/logs
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -86,6 +87,8 @@ volumes:
   app_logs:
     driver: local
   frontend_logs:
+    driver: local
+  parser_results:
     driver: local
 
 networks:

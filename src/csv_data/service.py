@@ -1,7 +1,9 @@
 import pandas as pd
 import os
-from typing import List, Optional
+import glob
+from typing import Any, Dict, List, Optional
 from datetime import datetime
+from pathlib import Path
 from .models import CSVProductData, CSVFilterRequest, CSVResponse, UniqueNamesResponse, UniqueGostsResponse, UniqueBrandsResponse, ProductRecord, ProductJSONResponse, AllValuesFilterRequest, AllValuesResponse, UniqueValuesResponse
 
 
@@ -9,8 +11,43 @@ class CSVDataService:
     """Сервис для работы с данными из CSV файла"""
     
     def __init__(self):
-        self.csv_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'parser', 'preprocessing_result.csv')
+        self.csv_file_path = self._get_latest_csv_file()
         self._data: Optional[pd.DataFrame] = None
+    
+    def _get_latest_csv_file(self) -> str:
+        """Находит последний сгенерированный CSV файл в папке results"""
+        # Путь к папке results
+        parser_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'parser')
+        results_dir = os.path.join(parser_dir, 'results')
+        
+        # Если папка results не существует, используем старый путь
+        if not os.path.exists(results_dir):
+            old_path = os.path.join(parser_dir, 'preprocessing_result.csv')
+            if os.path.exists(old_path):
+                return old_path
+            else:
+                raise FileNotFoundError("No CSV files found in parser directory")
+        
+        # Ищем все файлы preprocessing_result_*.csv в папке results
+        pattern = os.path.join(results_dir, 'preprocessing_result_*.csv')
+        csv_files = glob.glob(pattern)
+        
+        if not csv_files:
+            # Если нет файлов с timestamp, ищем обычный preprocessing_result.csv
+            fallback_path = os.path.join(results_dir, 'preprocessing_result.csv')
+            if os.path.exists(fallback_path):
+                return fallback_path
+            
+            # Если и его нет, используем старый путь
+            old_path = os.path.join(parser_dir, 'preprocessing_result.csv')
+            if os.path.exists(old_path):
+                return old_path
+            
+            raise FileNotFoundError("No preprocessing CSV files found")
+        
+        # Сортируем файлы по времени модификации (последний измененный файл)
+        latest_file = max(csv_files, key=os.path.getmtime)
+        return latest_file
     
     def _load_data(self) -> pd.DataFrame:
         """Загружает данные из CSV файла"""
@@ -22,6 +59,12 @@ class CSVDataService:
             except Exception as e:
                 raise Exception(f"Ошибка загрузки CSV файла: {str(e)}")
         return self._data
+    
+    def refresh_data(self) -> None:
+        """Обновляет данные, загружая последний доступный CSV файл"""
+        self.csv_file_path = self._get_latest_csv_file()
+        self._data = None  # Сбрасываем кэш данных
+        self._load_data()  # Загружаем новые данные
     
     def get_first_product_by_name(self, name: Optional[str] = None) -> Optional[CSVProductData]:
         """Возвращает первый продукт по наименованию"""
@@ -391,3 +434,28 @@ class CSVDataService:
         values.sort()
         
         return UniqueValuesResponse(values=values, field=field)
+    
+    def get_all_products(self) -> List[Dict[str, Any]]:
+        """Возвращает все продукты в виде списка словарей для алгоритма ценообразования"""
+        data = self._load_data()
+        products = []
+        
+        for _, row in data.iterrows():
+            product_dict = {
+                "вид_продукции": str(row.get('Тип_продукции', '')),
+                "склад": str(row.get('Город', '')),
+                "наименование": str(row.get('Наименование', '')),
+                "марка_стали": str(row.get('Основная_марка', '')),
+                "диаметр": str(row.get('Размер', '')),
+                "ГОСТ": str(row.get('ГОСТ', '')),
+                "цена": float(row.get('Цена', 0)) if not pd.isna(row.get('Цена')) else 0.0,
+                "производитель": str(row.get('Компания', '')),
+                "регион": self._get_region_by_city(str(row.get('Город', '')))
+            }
+            products.append(product_dict)
+        
+        return products
+
+
+# Глобальный экземпляр сервиса
+csv_data_service = CSVDataService()

@@ -3,10 +3,12 @@ from typing import Optional, List
 from pydantic import BaseModel
 import pandas as pd
 from .service import ParserService
+from ..csv_data.service import CSVDataService
 
 router = APIRouter(prefix="/parser", tags=["parser"])
 
 parser_service = ParserService()
+csv_service = CSVDataService()
 
 
 class ParsingRequest(BaseModel):
@@ -36,6 +38,10 @@ async def run_parsing(
             with_proxy=request.with_proxy,
             filter_keywords=request.filter_keywords
         )
+        
+        # Если парсинг успешен, обновляем данные CSV
+        if result.get("success", False):
+            background_tasks.add_task(csv_service.refresh_data)
         
         return ParsingResponse(**result)
         

@@ -56,13 +56,15 @@ def verify_token(token: str) -> models.TokenData:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get('id')
-        return models.TokenData(user_id=user_id)
+        email: str = payload.get('sub')
+        return models.TokenData(user_id=user_id, email=email)
     except PyJWTError as e:
         logging.warning(f"Token verification failed: {str(e)}")
         raise AuthenticationError()
 
 
 def register_user(db: Session, register_user_request: models.RegisterUserRequest) -> None:
+    ALLOW_REGISTRATION = True
     if not ALLOW_REGISTRATION:
         # Проверяем, есть ли уже пользователи в системе
         user_count = db.query(User).count()

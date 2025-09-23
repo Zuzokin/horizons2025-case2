@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 from datetime import datetime
 
@@ -15,8 +15,7 @@ class CSVProductData(BaseModel):
     price_category: Optional[str] = None  # Категория_цены
     price: Optional[float] = None  # Цена
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CSVFilterRequest(BaseModel):
@@ -53,23 +52,16 @@ class UniqueBrandsResponse(BaseModel):
 
 class ProductRecord(BaseModel):
     """Модель записи продукта в требуемом формате"""
-    вид_продукции: Optional[str] = None
+    вид_продукции: Optional[str] = Field(None, alias='вид продукции')
     склад: Optional[str] = None
     наименование: Optional[str] = None
-    марка_стали: Optional[str] = None
+    марка_стали: Optional[str] = Field(None, alias='марка стали')
     диаметр: Optional[str] = None
     ГОСТ: Optional[str] = None
     цена: Optional[float] = None
     наличие: Optional[str] = None
     производитель: Optional[str] = None
     регион: Optional[str] = None
-    
-    class Config:
-        # Используем алиасы для полей на русском языке
-        fields = {
-            'вид_продукции': 'вид продукции',
-            'марка_стали': 'марка стали'
-        }
 
 
 class ProductJSONResponse(BaseModel):
