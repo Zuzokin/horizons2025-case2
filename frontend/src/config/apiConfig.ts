@@ -40,14 +40,32 @@ interface ApiConfig {
     let apiPort: string;
     
     if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
-      // Локальная разработка - используем тот же хост и порт
-      apiPort = currentPort || '80';
+      // Проверяем, включен ли локальный режим
+      const localMode = localStorage.getItem('local_mode') === 'true';
+      
+      if (localMode) {
+        console.log('🔧 Local mode enabled - using fallback data');
+        return 'http://localhost:3000'; // Возвращаем фронтенд URL для fallback
+      }
+      
+      // Локальная разработка - пробуем разные варианты backend
+      const possibleBackends = [
+        '10.20.3.135:8000',  // Ваш удаленный backend
+        '10.20.3.135:80',    // Через nginx
+        'localhost:8000',     // Локальный fallback
+        '127.0.0.1:8000'     // Локальный fallback
+      ];
+      
+      // Возвращаем первый вариант, проверка будет в API функциях
+      const selectedBackend = possibleBackends[0];
+      console.log('🔧 Using backend for local development:', selectedBackend);
+      return `http://${selectedBackend}`;
     } else if (currentPort === '3000' || currentPort === '') {
-      // Разработка - фронтенд на 3000, бэкенд через nginx на 80
-      apiPort = '80';
+      // Разработка - фронтенд на 3000, бэкенд на 8000
+      apiPort = '8000';
     } else if (currentPort === '3001') {
-      // Альтернативный порт разработки
-      apiPort = '80';
+      // Альтернативный порт разработки - бэкенд на 8000
+      apiPort = '8000';
     } else {
       // Продакшн - используем тот же порт
       apiPort = currentPort;

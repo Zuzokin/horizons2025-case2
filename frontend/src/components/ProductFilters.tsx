@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -34,27 +34,9 @@ interface ProductFiltersProps {
   onFiltersChange: (filters: FilterState) => void;
 }
 
-// Получаем уникальные значения из реальных данных
-let productTypes = ['Все виды'];
-let warehouses = ['Все склады'];
-let steelGrades = ['Все марки'];
-let diameters = ['Все диаметры'];
-let gosts = ['Все ГОСТы'];
-
-// Загружаем данные для фильтров
-fetchRealMetalsPricingData(1000, 0).then(data => {
-  productTypes = ['Все виды', ...getUniqueValues(data.records, 'вид_продукции')];
-  warehouses = ['Все склады', ...getUniqueValues(data.records, 'склад')];
-  steelGrades = ['Все марки', ...getUniqueValues(data.records, 'марка_стали')];
-  diameters = ['Все диаметры', ...getUniqueValues(data.records, 'диаметр')];
-  gosts = ['Все ГОСТы', ...getUniqueValues(data.records, 'ГОСТ')];
-}).catch(error => {
-  console.error('Error loading filter data:', error);
-});
-
 function ProductFilters({ onFiltersChange }: ProductFiltersProps) {
   const [filters, setFilters] = useState<FilterState>({
-    productType: 'Все виды',
+    productType: 'Все типы',
     warehouse: 'Все склады',
     name: '',
     steelGrade: 'Все марки',
@@ -62,7 +44,35 @@ function ProductFilters({ onFiltersChange }: ProductFiltersProps) {
     gost: 'Все ГОСТы'
   });
 
+  const [filterOptions, setFilterOptions] = useState({
+    productTypes: ['Все типы'],
+    warehouses: ['Все склады'],
+    steelGrades: ['Все марки'],
+    diameters: ['Все диаметры'],
+    gosts: ['Все ГОСТы']
+  });
+
   const [expanded, setExpanded] = useState(true);
+
+  // Загружаем данные для фильтров
+  useEffect(() => {
+    const loadFilterData = async () => {
+      try {
+        const data = await fetchRealMetalsPricingData(1000, 0);
+        setFilterOptions({
+          productTypes: ['Все типы', ...getUniqueValues(data.records, 'вид_продукции')],
+          warehouses: ['Все склады', ...getUniqueValues(data.records, 'склад')],
+          steelGrades: ['Все марки', ...getUniqueValues(data.records, 'марка_стали')],
+          diameters: ['Все диаметры', ...getUniqueValues(data.records, 'диаметр')],
+          gosts: ['Все ГОСТы', ...getUniqueValues(data.records, 'ГОСТ')]
+        });
+      } catch (error) {
+        console.error('Error loading filter data:', error);
+      }
+    };
+
+    loadFilterData();
+  }, []);
 
   const handleFilterChange = (key: keyof FilterState, value: string) => {
     const newFilters = { ...filters, [key]: value };
@@ -72,7 +82,7 @@ function ProductFilters({ onFiltersChange }: ProductFiltersProps) {
 
   const clearFilters = () => {
     const clearedFilters: FilterState = {
-      productType: 'Все виды',
+      productType: 'Все типы',
       warehouse: 'Все склады',
       name: '',
       steelGrade: 'Все марки',
@@ -85,7 +95,7 @@ function ProductFilters({ onFiltersChange }: ProductFiltersProps) {
 
   const getActiveFiltersCount = () => {
     let count = 0;
-    if (filters.productType !== 'Все виды') count++;
+    if (filters.productType !== 'Все типы') count++;
     if (filters.warehouse !== 'Все склады') count++;
     if (filters.name) count++;
     if (filters.steelGrade !== 'Все марки') count++;
@@ -169,7 +179,7 @@ function ProductFilters({ onFiltersChange }: ProductFiltersProps) {
                   '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#f57838' }
                 }}
               >
-                {productTypes.map((type) => (
+                {filterOptions.productTypes.map((type) => (
                   <MenuItem key={type} value={type}>
                     {type}
                   </MenuItem>
@@ -190,7 +200,7 @@ function ProductFilters({ onFiltersChange }: ProductFiltersProps) {
                   '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#f57838' }
                 }}
               >
-                {warehouses.map((warehouse) => (
+                {filterOptions.warehouses.map((warehouse) => (
                   <MenuItem key={warehouse} value={warehouse}>
                     {warehouse}
                   </MenuItem>
@@ -225,7 +235,7 @@ function ProductFilters({ onFiltersChange }: ProductFiltersProps) {
                   '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#f57838' }
                 }}
               >
-                {steelGrades.map((grade) => (
+                {filterOptions.steelGrades.map((grade) => (
                   <MenuItem key={grade} value={grade}>
                     {grade}
                   </MenuItem>
@@ -246,7 +256,7 @@ function ProductFilters({ onFiltersChange }: ProductFiltersProps) {
                   '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#f57838' }
                 }}
               >
-                {diameters.map((diameter) => (
+                {filterOptions.diameters.map((diameter) => (
                   <MenuItem key={diameter} value={diameter}>
                     {diameter}
                   </MenuItem>
@@ -267,7 +277,7 @@ function ProductFilters({ onFiltersChange }: ProductFiltersProps) {
                   '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#f57838' }
                 }}
               >
-                {gosts.map((gost) => (
+                {filterOptions.gosts.map((gost) => (
                   <MenuItem key={gost} value={gost}>
                     {gost}
                   </MenuItem>

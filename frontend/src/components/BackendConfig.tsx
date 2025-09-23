@@ -16,7 +16,7 @@ interface BackendConfigProps {
 }
 
 function BackendConfig({ onBackendChange }: BackendConfigProps) {
-  const [backendUrl, setBackendUrl] = useState('localhost:80');
+  const [backendUrl, setBackendUrl] = useState('10.20.3.135:8000');
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
 
@@ -69,7 +69,7 @@ function BackendConfig({ onBackendChange }: BackendConfigProps) {
             label="Backend URL"
             value={backendUrl}
             onChange={(e) => setBackendUrl(e.target.value)}
-            placeholder="localhost:80"
+            placeholder="10.20.3.135:8000"
             helperText="Введите адрес и порт backend сервера"
             sx={{ mb: 2 }}
           />
@@ -107,7 +107,8 @@ function BackendConfig({ onBackendChange }: BackendConfigProps) {
 
         <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
           Попробуйте разные варианты:
-          <br />• localhost:80 (через nginx)
+          <br />• 10.20.3.135:8000 (прямое подключение)
+          <br />• 10.20.3.135:80 (через nginx)
           <br />• localhost:8000 (локальный backend)
         </Typography>
       </CardContent>

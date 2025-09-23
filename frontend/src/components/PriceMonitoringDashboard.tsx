@@ -17,7 +17,7 @@ interface FilterState {
 
 function PriceMonitoringDashboard() {
   const [filters, setFilters] = useState<FilterState>({
-    productType: 'Все виды',
+    productType: 'Все типы',
     warehouse: 'Все склады',
     name: '',
     steelGrade: 'Все марки',

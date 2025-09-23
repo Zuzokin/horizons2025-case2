@@ -47,27 +47,29 @@ function ProblematicTubesTable({ onTubeSelect, filters }: ProblematicTubesTableP
   const [appliedRecommendations, setAppliedRecommendations] = React.useState<Set<string>>(new Set());
   const [showSuccessMessage, setShowSuccessMessage] = React.useState(false);
 
-  React.useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        console.log('Loading data in ProblematicTubesTable...');
-        const data = await fetchRealMetalsPricingData(1000, 0);
-        console.log('Data loaded:', data);
-        console.log('Records count:', data.records?.length || 0);
-        setRealData(data);
-        
-        // Загружаем рекомендации для всех труб
-        await loadRecommendations(data);
-      } catch (err) {
-        console.error('Error loading real data:', err);
-        setError(`Ошибка загрузки данных: ${err instanceof Error ? err.message : 'Неизвестная ошибка'}`);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Загружаем данные при каждом рендере (данные кэшируются в fetchRealMetalsPricingData)
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('Loading data in ProblematicTubesTable...');
+      const data = await fetchRealMetalsPricingData(1000, 0);
+      console.log('Data loaded:', data);
+      console.log('Records count:', data.records?.length || 0);
+      setRealData(data);
+      
+      // Загружаем рекомендации для всех труб
+      await loadRecommendations(data);
+    } catch (err) {
+      console.error('Error loading real data:', err);
+      setError(`Ошибка загрузки данных: ${err instanceof Error ? err.message : 'Неизвестная ошибка'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Загружаем данные только один раз при монтировании
+  React.useEffect(() => {
     loadData();
   }, []);
 
@@ -282,11 +284,19 @@ function ProblematicTubesTable({ onTubeSelect, filters }: ProblematicTubesTableP
   }
 
   // Применяем фильтры к данным и определяем проблемные трубы
-  console.log('🔍 Applying filters:', filters);
+  console.log('🔍 ProblematicTubesTable render - filters:', filters);
   console.log('🔍 Raw records count:', realData.records?.length || 0);
   
   const filteredRecords = getFilteredRecords(realData.records, filters);
   console.log('🔍 Filtered records count:', filteredRecords.length);
+  
+  // Показываем детали фильтрации
+  if (filters.productType !== 'Все типы') {
+    console.log('🔍 Filtering by product type:', filters.productType);
+  }
+  if (filters.warehouse !== 'Все склады') {
+    console.log('🔍 Filtering by warehouse:', filters.warehouse);
+  }
   
   // Временно показываем первые несколько записей для отладки
   if (filteredRecords.length > 0) {
@@ -378,11 +388,6 @@ function ProblematicTubesTable({ onTubeSelect, filters }: ProblematicTubesTableP
       <Typography variant="h6" sx={{ color: '#292929', fontWeight: 800, mb: 2 }}>
         Список труб (показано {Math.min(problematicTubes.length, 10)} из {problematicTubes.length} позиций)
       </Typography>
-      
-      <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
-        <AlertTitle>Режим диагностики</AlertTitle>
-        Временно отключена фильтрация для диагностики проблемы с отображением труб. Проверьте консоль браузера для деталей.
-      </Alert>
       
       {/* Кнопка применения всех рекомендаций */}
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>

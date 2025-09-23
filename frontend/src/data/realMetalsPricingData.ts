@@ -164,9 +164,60 @@ export const getFilteredRecords = (
   console.log('🔍 getFilteredRecords called with', records.length, 'records');
   console.log('🔍 Filters:', filters);
   
-  // Временно возвращаем все записи для диагностики
-  console.log('🔍 TEMPORARY: Returning all records for debugging');
-  return records;
+  const filtered = records.filter(record => {
+    // Фильтр по типу продукции
+    if (filters.productType && filters.productType !== 'Все типы') {
+      const productType = record['вид_продукции']?.toLowerCase() || '';
+      const filterValue = filters.productType.toLowerCase();
+      if (!productType.includes(filterValue)) {
+        console.log('🔍 Filtered out by product type:', record['наименование'], 'vs', filters.productType);
+        return false;
+      }
+    }
+    
+    // Фильтр по складу
+    if (filters.warehouse && filters.warehouse !== 'Все склады') {
+      const warehouse = record['склад']?.toLowerCase() || '';
+      const filterValue = filters.warehouse.toLowerCase();
+      if (!warehouse.includes(filterValue)) {
+        console.log('🔍 Filtered out by warehouse:', record['наименование'], 'vs', filters.warehouse);
+        return false;
+      }
+    }
+    
+    // Фильтр по наименованию
+    if (filters.name && filters.name !== 'Все наименования') {
+      if (!record['наименование']?.toLowerCase().includes(filters.name.toLowerCase())) {
+        return false;
+      }
+    }
+    
+    // Фильтр по марке стали
+    if (filters.steelGrade && filters.steelGrade !== 'Все марки') {
+      if (!record['марка_стали']?.toLowerCase().includes(filters.steelGrade.toLowerCase())) {
+        return false;
+      }
+    }
+    
+    // Фильтр по диаметру
+    if (filters.diameter && filters.diameter !== 'Все диаметры') {
+      if (!record['диаметр']?.toLowerCase().includes(filters.diameter.toLowerCase())) {
+        return false;
+      }
+    }
+    
+    // Фильтр по ГОСТ
+    if (filters.gost && filters.gost !== 'Все ГОСТы') {
+      if (!record['ГОСТ']?.toLowerCase().includes(filters.gost.toLowerCase())) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
+  
+  console.log('🔍 Filtered result:', filtered.length, 'records');
+  return filtered;
 };
 
 export const getAveragePrice = (records: RealMetalPricingRecord[]): number => {
@@ -190,9 +241,35 @@ export const getPriceRange = (records: RealMetalPricingRecord[]): { min: number,
 export const getProblematicTubesFromRealData = (records: RealMetalPricingRecord[]): ProblematicTubeRecord[] => {
   console.log('🔍 getProblematicTubesFromRealData called with', records.length, 'records');
   
-  // Временно показываем все записи для диагностики
-  console.log('🔍 TEMPORARY: Showing all records for debugging');
-  const tubeRecords = records;
+  // Фильтруем только трубы (исключаем арматуру, уголки и т.д.)
+  const tubeRecords = records.filter(record => {
+    const productType = record['вид_продукции']?.toLowerCase() || '';
+    const name = record['наименование']?.toLowerCase() || '';
+    
+    // Включаем только трубы
+    const isTube = productType.includes('труба') || 
+                   productType.includes('габарит') || 
+                   productType.includes('профиль') ||
+                   name.includes('труба') ||
+                   name.includes('габарит') ||
+                   name.includes('профиль');
+    
+    // Исключаем арматуру, уголки, швеллеры и т.д.
+    const isNotTube = productType.includes('арматура') ||
+                      productType.includes('уголок') ||
+                      productType.includes('швеллер') ||
+                      productType.includes('балка') ||
+                      productType.includes('лист') ||
+                      productType.includes('проволока') ||
+                      name.includes('арматура') ||
+                      name.includes('уголок') ||
+                      name.includes('швеллер') ||
+                      name.includes('балка') ||
+                      name.includes('лист') ||
+                      name.includes('проволока');
+    
+    return isTube && !isNotTube;
+  });
   
   console.log('🔍 Filtered tube records:', tubeRecords.length);
   

@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Box, Stack } from '@mui/material';
 import LoginForm from './LoginForm';
+import RegisterForm from './RegisterForm';
 import CorsErrorPanel from './CorsErrorPanel';
 import { useAuth } from '../contexts/AuthContext';
 
 function AuthPage() {
+  const [isLogin, setIsLogin] = useState(true);
   const { corsError } = useAuth();
 
   return (
@@ -21,7 +23,11 @@ function AuthPage() {
       <Stack spacing={3} sx={{ width: '100%', maxWidth: 500 }}>
         {corsError && <CorsErrorPanel />}
         
-        <LoginForm />
+        {isLogin ? (
+          <LoginForm onSwitchToRegister={() => setIsLogin(false)} />
+        ) : (
+          <RegisterForm onSwitchToLogin={() => setIsLogin(true)} />
+        )}
       </Stack>
     </Box>
   );

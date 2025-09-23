@@ -7,12 +7,19 @@ import {
   Typography,
   Stack,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Divider,
+  Link
 } from '@mui/material';
 import LoginIcon from '@mui/icons-material/Login';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { useAuth } from '../contexts/AuthContext';
 
-function LoginForm() {
+interface LoginFormProps {
+  onSwitchToRegister: () => void;
+}
+
+function LoginForm({ onSwitchToRegister }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -102,10 +109,25 @@ function LoginForm() {
           </Stack>
         </Box>
 
+        <Divider sx={{ my: 2 }} />
+
         <Box sx={{ textAlign: 'center' }}>
-          <Typography variant="body2" sx={{ color: '#616161' }}>
-            Для регистрации обратитесь к администратору системы
+          <Typography variant="body2" sx={{ color: '#616161', mb: 1 }}>
+            Нет аккаунта?
           </Typography>
+          <Link
+            component="button"
+            variant="body2"
+            onClick={onSwitchToRegister}
+            sx={{
+              color: '#f57838',
+              fontWeight: 700,
+              textDecoration: 'none',
+              '&:hover': { textDecoration: 'underline' }
+            }}
+          >
+            Зарегистрироваться
+          </Link>
         </Box>
       </Stack>
     </Paper>
