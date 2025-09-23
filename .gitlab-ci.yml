@@ -1,0 +1,237 @@
+# GitLab CI/CD Pipeline для Horizons Case 2
+
+# Определяем стадии пайплайна
+stages:
+  - test
+  - build
+  - deploy
+
+# Переменные окружения
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  POSTGRES_DB: horizons_test_db
+  POSTGRES_USER: horizons_user
+  POSTGRES_PASSWORD: horizons_password
+  DATABASE_URL: "postgresql://horizons_user:horizons_password@postgres:5432/horizons_test_db"
+
+# Сервисы для тестирования
+services:
+  - postgres:15-alpine
+  - docker:dind
+
+# Кэширование для ускорения сборки
+cache:
+  paths:
+    - .venv/
+    - frontend/node_modules/
+    - frontend/build/
+
+# Тестирование Backend
+test_backend:
+  stage: test
+  image: python:3.12-slim
+  before_script:
+    - apt-get update && apt-get install -y gcc g++ libpq-dev curl
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+    - pip install -r requirements-dev.txt
+  script:
+    - python -m pytest tests/ -v --cov=src --cov-report=xml
+  coverage: '/TOTAL.*\s+(\d+%)$/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    paths:
+      - coverage.xml
+    expire_in: 1 week
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# Тестирование Frontend
+test_frontend:
+  stage: test
+  image: node:18-alpine
+  before_script:
+    - cd frontend
+    - npm ci
+  script:
+    - npm run test -- --coverage --watchAll=false
+    - npm run build
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: frontend/coverage/cobertura-coverage.xml
+    paths:
+      - frontend/build/
+      - frontend/coverage/
+    expire_in: 1 week
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# Сборка Docker образов
+build_backend:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA .
+    - docker build -t $CI_REGISTRY_IMAGE/backend:latest .
+    - docker push $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE/backend:latest
+  only:
+    - main
+    - develop
+
+build_frontend:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - cd frontend
+    - docker build -t $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA .
+    - docker build -t $CI_REGISTRY_IMAGE/frontend:latest .
+    - docker push $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE/frontend:latest
+  only:
+    - main
+    - develop
+
+# Развертывание в staging
+deploy_staging:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -H $STAGING_SERVER >> ~/.ssh/known_hosts
+  script:
+    - |
+      ssh $STAGING_USER@$STAGING_SERVER << 'EOF'
+        cd /home/horizons/horizons-app/horizons_case2
+        git pull origin develop
+        docker compose -f docker-compose.yml -f docker-compose.staging.yml pull
+        docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d
+        docker system prune -f
+      EOF
+  environment:
+    name: staging
+    url: https://staging.yourdomain.com
+  only:
+    - develop
+  when: manual
+
+# Развертывание в production
+deploy_production:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -H $PRODUCTION_SERVER >> ~/.ssh/known_hosts
+  script:
+    - |
+      ssh $PRODUCTION_USER@$PRODUCTION_SERVER << 'EOF'
+        cd /home/horizons/horizons-app/horizons_case2
+        
+        # Создание бэкапа базы данных
+        docker compose exec -T postgres pg_dump -U horizons_user horizons_db > backup_$(date +%Y%m%d_%H%M%S).sql
+        
+        # Обновление кода
+        git pull origin main
+        
+        # Обновление образов
+        docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+        
+        # Перезапуск сервисов
+        docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+        
+        # Очистка неиспользуемых ресурсов
+        docker system prune -f
+        
+        # Проверка статуса
+        docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
+      EOF
+  environment:
+    name: production
+    url: https://yourdomain.com
+  only:
+    - main
+  when: manual
+
+# Откат изменений (ручная задача)
+rollback_production:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -H $PRODUCTION_SERVER >> ~/.ssh/known_hosts
+  script:
+    - |
+      ssh $PRODUCTION_USER@$PRODUCTION_SERVER << 'EOF'
+        cd /home/horizons/horizons-app/horizons_case2
+        
+        # Откат к предыдущему коммиту
+        git log --oneline -5
+        echo "Введите хэш коммита для отката:"
+        read COMMIT_HASH
+        git checkout $COMMIT_HASH
+        
+        # Пересборка и запуск
+        docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache
+        docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+        
+        # Проверка статуса
+        docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
+      EOF
+  environment:
+    name: production
+    url: https://yourdomain.com
+  only:
+    - main
+  when: manual
+
+# Очистка старых образов
+cleanup_registry:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl jq
+  script:
+    - |
+      # Получение токена для GitLab Container Registry API
+      TOKEN=$(curl -s -u $CI_REGISTRY_USER:$CI_REGISTRY_PASSWORD "https://gitlab.com/jwt/auth?service=container_registry&scope=repository:$CI_PROJECT_PATH:pull,push" | jq -r '.token')
+      
+      # Получение списка тегов
+      TAGS=$(curl -s -H "Authorization: Bearer $TOKEN" "https://gitlab.com/v2/$CI_PROJECT_PATH/backend/tags/list" | jq -r '.tags[]' | head -n -10)
+      
+      # Удаление старых тегов
+      for tag in $TAGS; do
+        curl -X DELETE -H "Authorization: Bearer $TOKEN" "https://gitlab.com/v2/$CI_PROJECT_PATH/backend/manifests/$tag"
+      done
+  only:
+    - main
+  when: manual

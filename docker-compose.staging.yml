@@ -1,0 +1,92 @@
+# Конфигурация для staging окружения
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: horizons_postgres_staging
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-horizons_db}
+      POSTGRES_USER: ${POSTGRES_USER:-horizons_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_data_staging:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-horizons_user} -d ${POSTGRES_DB:-horizons_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - horizons_network_staging
+
+  app:
+    image: ${CI_REGISTRY_IMAGE}/backend:latest
+    container_name: horizons_app_staging
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      PYTHONUNBUFFERED: 1
+      PYTHONDONTWRITEBYTECODE: 1
+    ports:
+      - "8001:8000"  # Другой порт для staging
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./parser:/app/parser:ro
+      - parser_results_staging:/app/parser/results
+      - app_logs_staging:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - horizons_network_staging
+
+  frontend:
+    image: ${CI_REGISTRY_IMAGE}/frontend:latest
+    container_name: horizons_frontend_staging
+    environment:
+      NODE_ENV: production
+      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:8001}
+    ports:
+      - "3001:3000"  # Другой порт для staging
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - frontend_logs_staging:/var/log/nginx
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - horizons_network_staging
+
+volumes:
+  postgres_data_staging:
+    driver: local
+  app_logs_staging:
+    driver: local
+  frontend_logs_staging:
+    driver: local
+  parser_results_staging:
+    driver: local
+
+networks:
+  horizons_network_staging:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16

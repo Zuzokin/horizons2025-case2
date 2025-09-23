@@ -8,7 +8,6 @@ interface AuthContextType {
   isLoading: boolean;
   showWelcome: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, firstName: string, lastName: string, password: string) => Promise<void>;
   logout: () => void;
   error: string | null;
   corsError: boolean;
@@ -115,34 +114,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const register = async (email: string, firstName: string, lastName: string, password: string) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      setCorsError(false);
-      
-      const { registerUser } = await import('../api');
-      await registerUser({
-        email,
-        first_name: firstName,
-        last_name: lastName,
-        password
-      });
-      
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Ошибка регистрации';
-      setError(errorMessage);
-      
-      // Проверяем на CORS ошибку
-      if (errorMessage.includes('CORS не настроен')) {
-        setCorsError(true);
-      }
-      
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const logout = () => {
     setUser(null);
@@ -161,7 +132,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isLoading,
     showWelcome,
     login,
-    register,
     logout,
     error,
     corsError

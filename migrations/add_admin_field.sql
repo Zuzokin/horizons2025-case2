@@ -1,13 +1,6 @@
--- Создание расширения для UUID
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Создание базы данных (если нужно)
--- CREATE DATABASE horizons_db;
-
--- Установка прав доступа
-GRANT ALL PRIVILEGES ON DATABASE horizons_db TO horizons_user;
-
 -- Миграция для добавления поля is_admin в таблицу users
+-- Выполняется при развертывании приложения
+
 -- Добавляем поле is_admin в таблицу users
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE NOT NULL;
 

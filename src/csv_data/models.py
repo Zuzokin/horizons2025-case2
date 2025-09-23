@@ -52,10 +52,10 @@ class UniqueBrandsResponse(BaseModel):
 
 class ProductRecord(BaseModel):
     """Модель записи продукта в требуемом формате"""
-    вид_продукции: Optional[str] = Field(None, alias='вид продукции')
+    вид_продукции: Optional[str] = None
     склад: Optional[str] = None
     наименование: Optional[str] = None
-    марка_стали: Optional[str] = Field(None, alias='марка стали')
+    марка_стали: Optional[str] = None
     диаметр: Optional[str] = None
     ГОСТ: Optional[str] = None
     цена: Optional[float] = None

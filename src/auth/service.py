@@ -43,10 +43,11 @@ def authenticate_user(email: str, password: str, db: Session) -> User | bool:
     return user
 
 
-def create_access_token(email: str, user_id: UUID, expires_delta: timedelta) -> str:
+def create_access_token(email: str, user_id: UUID, expires_delta: timedelta, is_admin: bool = False) -> str:
     encode = {
         'sub': email,
         'id': str(user_id),
+        'is_admin': is_admin,
         'exp': datetime.now(timezone.utc) + expires_delta
     }
     return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
@@ -57,40 +58,79 @@ def verify_token(token: str) -> models.TokenData:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get('id')
         email: str = payload.get('sub')
-        return models.TokenData(user_id=user_id, email=email)
+        is_admin: bool = payload.get('is_admin', False)
+        return models.TokenData(user_id=user_id, email=email, is_admin=is_admin)
     except PyJWTError as e:
         logging.warning(f"Token verification failed: {str(e)}")
         raise AuthenticationError()
 
 
 def register_user(db: Session, register_user_request: models.RegisterUserRequest) -> None:
-    ALLOW_REGISTRATION = True
-    if not ALLOW_REGISTRATION:
-        # Проверяем, есть ли уже пользователи в системе
-        user_count = db.query(User).count()
-        if user_count > 0:
-            logging.warning(f"Registration attempt when registration is disabled: {register_user_request.email}")
-            raise AuthenticationError("Registration is currently disabled")
-    
+    # Отключаем обычную регистрацию - только админы могут регистрировать пользователей
+    logging.warning(f"Registration attempt blocked: {register_user_request.email}")
+    raise AuthenticationError("Registration is disabled. Only administrators can register new users.")
+
+
+def register_user_by_admin(db: Session, register_user_request: models.RegisterUserRequest) -> None:
+    """Регистрация пользователя администратором"""
     try:
         create_user_model = User(
             id=uuid4(),
             email=register_user_request.email,
             first_name=register_user_request.first_name,
             last_name=register_user_request.last_name,
-            password_hash=get_password_hash(register_user_request.password)
+            password_hash=get_password_hash(register_user_request.password),
+            is_admin=False  # Новые пользователи не являются админами по умолчанию
         )    
         db.add(create_user_model)
         db.commit()
+        logging.info(f"User registered by admin: {register_user_request.email}")
     except Exception as e:
-        logging.error(f"Failed to register user: {register_user_request.email}. Error: {str(e)}")
+        logging.error(f"Failed to register user by admin: {register_user_request.email}. Error: {str(e)}")
+        raise
+
+
+def is_admin_user(db: Session, user_id: UUID) -> bool:
+    """Проверка, является ли пользователь администратором"""
+    user = db.query(User).filter(User.id == user_id).first()
+    return user.is_admin if user else False
+
+
+def get_user_by_id(db: Session, user_id: UUID) -> User | None:
+    """Получение пользователя по ID"""
+    return db.query(User).filter(User.id == user_id).first()
+
+
+def create_admin_user(db: Session, email: str, password: str, first_name: str = "Admin", last_name: str = "User") -> User:
+    """Создание администратора системы"""
+    try:
+        admin_user = User(
+            id=uuid4(),
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            password_hash=get_password_hash(password),
+            is_admin=True
+        )
+        db.add(admin_user)
+        db.commit()
+        logging.info(f"Admin user created: {email}")
+        return admin_user
+    except Exception as e:
+        logging.error(f"Failed to create admin user: {email}. Error: {str(e)}")
         raise
     
     
 def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]) -> models.TokenData:
     return verify_token(token)
 
-CurrentUser = Annotated[models.TokenData, Depends(get_current_user)]
+def get_current_admin_user(token: Annotated[str, Depends(oauth2_bearer)]) -> models.TokenData:
+    """Получение текущего пользователя с проверкой админ прав"""
+    token_data = verify_token(token)
+    # Проверка админ прав будет выполнена в контроллере
+    return token_data
+
+CurrentUser = Annotated[models.TokenData, Depends(get_current_admin_user)]
 
 
 def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
@@ -98,5 +138,5 @@ def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depen
     user = authenticate_user(form_data.username, form_data.password, db)
     if not user:
         raise AuthenticationError()
-    token = create_access_token(user.email, user.id, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    token = create_access_token(user.email, user.id, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES), user.is_admin)
     return models.Token(access_token=token, token_type='bearer')

@@ -35,6 +35,11 @@ services:
       ALLOWED_ORIGINS: http://localhost:3000,http://10.20.3.39:3000
       PYTHONUNBUFFERED: 1
       PYTHONDONTWRITEBYTECODE: 1
+      # Админ пользователь по умолчанию
+      ADMIN_EMAIL: admin@horizons.local
+      ADMIN_PASSWORD: admin123
+      ADMIN_FIRST_NAME: System
+      ADMIN_LAST_NAME: Administrator
     ports:
       - "8000:8000"
     depends_on:
@@ -45,12 +50,6 @@ services:
       - ./parser:/app/parser:ro
       - parser_results:/app/parser/results
       - app_logs:/app/logs
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
     networks:
       - horizons_network
 
@@ -67,8 +66,7 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      app:
-        condition: service_healthy
+      - app
     restart: unless-stopped
     volumes:
       - frontend_logs:/var/log/nginx

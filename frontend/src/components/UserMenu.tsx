@@ -14,12 +14,15 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import PersonIcon from '@mui/icons-material/Person';
 import NotificationsIcon from '@mui/icons-material/Notifications';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import { useAuth } from '../contexts/AuthContext';
 import CompetitorNotificationsModal from './CompetitorNotificationsModal';
+import AdminPanel from './AdminPanel';
 
 function UserMenu() {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
   const { user, logout } = useAuth();
   const open = Boolean(anchorEl);
 
@@ -43,6 +46,15 @@ function UserMenu() {
 
   const handleNotificationsClose = () => {
     setNotificationsOpen(false);
+  };
+
+  const handleAdminPanelOpen = () => {
+    setAdminPanelOpen(true);
+    handleClose(); // Закрываем меню пользователя
+  };
+
+  const handleAdminPanelClose = () => {
+    setAdminPanelOpen(false);
   };
 
   const getUserInitials = () => {
@@ -156,6 +168,15 @@ function UserMenu() {
         
         <Divider />
         
+        {user?.is_admin && (
+          <MenuItem onClick={handleAdminPanelOpen}>
+            <ListItemIcon>
+              <AdminPanelSettingsIcon fontSize="small" />
+            </ListItemIcon>
+            <Typography variant="body2">Панель администратора</Typography>
+          </MenuItem>
+        )}
+        
         <MenuItem onClick={handleLogout}>
           <ListItemIcon>
             <LogoutIcon fontSize="small" />
@@ -168,6 +189,12 @@ function UserMenu() {
       <CompetitorNotificationsModal
         open={notificationsOpen}
         onClose={handleNotificationsClose}
+      />
+
+      {/* Модальное окно админ панели */}
+      <AdminPanel
+        open={adminPanelOpen}
+        onClose={handleAdminPanelClose}
       />
     </Box>
   );

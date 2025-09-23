@@ -1,6 +1,7 @@
 from uuid import UUID
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+from datetime import datetime
 from . import models
 from src.entities.user import User
 from src.exceptions import UserNotFoundError, InvalidPasswordError, PasswordMismatchError
@@ -14,12 +15,23 @@ def get_user_by_id(db: Session, user_id: UUID) -> models.UserResponse:
         logging.warning(f"User not found with ID: {user_id}")
         raise UserNotFoundError(user_id)
     logging.info(f"Successfully retrieved user with ID: {user_id}")
-    return user
+    return models.UserResponse(
+        id=user.id,
+        email=user.email,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        is_active=True,  # Пока не реализовано поле is_active
+        is_admin=user.is_admin,
+        created_at=datetime.now()  # Пока не реализовано поле created_at
+    )
 
 
 def change_password(db: Session, user_id: UUID, password_change: models.PasswordChange) -> None:
     try:
-        user = get_user_by_id(db, user_id)
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            logging.warning(f"User not found with ID: {user_id}")
+            raise UserNotFoundError(user_id)
         
         # Verify current password
         if not verify_password(password_change.current_password, user.password_hash):

@@ -501,6 +501,7 @@ export interface UserResponse {
   first_name: string;
   last_name: string;
   is_active: boolean;
+  is_admin: boolean;
   created_at: string;
 }
 
@@ -621,6 +622,101 @@ export async function getCurrentUser(token: string): Promise<UserResponse> {
     return userData;
   } catch (error) {
     console.error('Error getting user data:', error);
+    throw error;
+  }
+}
+
+// Админ API функции
+export interface AdminUserResponse {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  is_admin: boolean;
+}
+
+export interface AdminRegisterRequest {
+  email: string;
+  first_name: string;
+  last_name: string;
+  password: string;
+}
+
+export interface CreateAdminRequest {
+  email: string;
+  password: string;
+  first_name?: string;
+  last_name?: string;
+}
+
+// Регистрация пользователя администратором
+export async function adminRegisterUser(userData: AdminRegisterRequest, token: string): Promise<void> {
+  try {
+    const config = getApiConfig();
+    const res = await fetchWithTimeout(`${API_BASE}/admin/register-user`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(userData),
+    }, config.timeout);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Failed to register user: ${res.status} - ${errorText}`);
+    }
+  } catch (error) {
+    console.error('Error registering user:', error);
+    throw error;
+  }
+}
+
+// Получить всех пользователей
+export async function getAllUsers(token: string): Promise<AdminUserResponse[]> {
+  try {
+    const config = getApiConfig();
+    const res = await fetchWithTimeout(`${API_BASE}/admin/users`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    }, config.timeout);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Failed to get users: ${res.status} - ${errorText}`);
+    }
+    
+    return await res.json();
+  } catch (error) {
+    console.error('Error getting users:', error);
+    throw error;
+  }
+}
+
+// Создать администратора
+export async function createAdminUser(adminData: CreateAdminRequest, token: string): Promise<void> {
+  try {
+    const config = getApiConfig();
+    const res = await fetchWithTimeout(`${API_BASE}/admin/create-admin`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(adminData),
+    }, config.timeout);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Failed to create admin: ${res.status} - ${errorText}`);
+    }
+  } catch (error) {
+    console.error('Error creating admin:', error);
     throw error;
   }
 }
