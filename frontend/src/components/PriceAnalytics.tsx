@@ -5,6 +5,7 @@ import AnalyticsIcon from '@mui/icons-material/Analytics';
 import StorageIcon from '@mui/icons-material/Storage';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { fetchRealMetalsPricingData, getFilteredRecords, getAveragePrice, getPriceRange } from '../data/realMetalsPricingData';
+import DataStatusIndicator from './DataStatusIndicator';
 
 interface FilterState {
   productType: string;
@@ -43,10 +44,12 @@ function PriceAnalytics({ filters }: PriceAnalyticsProps) {
     const loadData = async () => {
       try {
         setLoading(true);
-                const data = await fetchRealMetalsPricingData(1000, 0);
+        console.log('🔄 Loading real data for PriceAnalytics...');
+        const data = await fetchRealMetalsPricingData(1000, 0);
+        console.log('✅ Real data loaded for PriceAnalytics:', data);
         setRealData(data);
       } catch (error) {
-        console.error('Error loading real data:', error);
+        console.error('❌ Error loading real data for PriceAnalytics:', error);
       } finally {
         setLoading(false);
       }
@@ -79,11 +82,19 @@ function PriceAnalytics({ filters }: PriceAnalyticsProps) {
 
   return (
     <Box>
-      <Stack direction="row" alignItems="center" spacing={2} mb={4}>
-        <AnalyticsIcon sx={{ color: '#f57838', fontSize: 36 }} />
-        <Typography variant="h5" sx={{ color: '#292929', fontWeight: 800, letterSpacing: 1 }}>
-          Детальная аналитика цен{getActiveFiltersText()}
-        </Typography>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+        <Stack direction="row" alignItems="center" spacing={2}>
+          <AnalyticsIcon sx={{ color: '#f57838', fontSize: 36 }} />
+          <Typography variant="h5" sx={{ color: '#292929', fontWeight: 800, letterSpacing: 1 }}>
+            Детальная аналитика цен{getActiveFiltersText()}
+          </Typography>
+        </Stack>
+        
+        <DataStatusIndicator 
+          isMockData={realData.is_mock_data}
+          lastUpdate={realData.generated_at}
+          recordCount={realData.total_count}
+        />
       </Stack>
 
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={4} mb={4}>

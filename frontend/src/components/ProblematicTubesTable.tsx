@@ -22,6 +22,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { fetchRealMetalsPricingData, getAveragePrice, getFilteredRecords, getProblematicTubesFromRealData, ProblematicTubeRecord } from '../data/realMetalsPricingData';
 import { getPriceRecommendation, updateProductPrice } from '../api';
+import DataStatusIndicator from './DataStatusIndicator';
 
 interface FilterState {
   productType: string;
@@ -52,16 +53,17 @@ function ProblematicTubesTable({ onTubeSelect, filters }: ProblematicTubesTableP
       try {
         setLoading(true);
         setError(null);
-        console.log('Loading data in ProblematicTubesTable...');
+        console.log('🔄 Loading real data in ProblematicTubesTable...');
         const data = await fetchRealMetalsPricingData(1000, 0);
-        console.log('Data loaded:', data);
-        console.log('Records count:', data.records?.length || 0);
+        console.log('✅ Real data loaded in ProblematicTubesTable:', data);
+        console.log('📊 Records count:', data.records?.length || 0);
+        console.log('🔍 Is mock data:', data.is_mock_data || false);
         setRealData(data);
         
         // Загружаем рекомендации для всех труб
         await loadRecommendations(data);
       } catch (err) {
-        console.error('Error loading real data:', err);
+        console.error('❌ Error loading real data in ProblematicTubesTable:', err);
         setError(`Ошибка загрузки данных: ${err instanceof Error ? err.message : 'Неизвестная ошибка'}`);
       } finally {
         setLoading(false);
@@ -344,11 +346,19 @@ function ProblematicTubesTable({ onTubeSelect, filters }: ProblematicTubesTableP
 
   return (
     <Box>
-      <Stack direction="row" alignItems="center" spacing={2} mb={3}>
-        <WarningIcon sx={{ color: '#f57838', fontSize: 32 }} />
-        <Typography variant="h5" sx={{ color: '#292929', fontWeight: 800 }}>
-          Мониторинг труб - Диагностика (все записи)
-        </Typography>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
+        <Stack direction="row" alignItems="center" spacing={2}>
+          <WarningIcon sx={{ color: '#f57838', fontSize: 32 }} />
+          <Typography variant="h5" sx={{ color: '#292929', fontWeight: 800 }}>
+            Мониторинг труб - Диагностика (все записи)
+          </Typography>
+        </Stack>
+        
+        <DataStatusIndicator 
+          isMockData={realData.is_mock_data}
+          lastUpdate={realData.generated_at}
+          recordCount={realData.total_count}
+        />
       </Stack>
 
       {/* Статистика */}

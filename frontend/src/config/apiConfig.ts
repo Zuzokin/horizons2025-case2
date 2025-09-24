@@ -9,7 +9,7 @@ interface ApiConfig {
   
   // Функция для автоматического определения базового URL API
   function getApiBaseUrl(): string {
-    // Проверяем переменную окружения
+    // Проверяем переменную окружения (приоритет)
     const envApiUrl = process.env.REACT_APP_API_BASE_URL;
     if (envApiUrl) {
       console.log('🔧 Using API URL from environment:', envApiUrl);
@@ -49,8 +49,8 @@ interface ApiConfig {
       // Альтернативный порт разработки
       apiPort = '80';
     } else {
-      // Продакшн - используем тот же порт
-      apiPort = currentPort;
+      // Продакшн - используем тот же порт (nginx проксирует на 80)
+      apiPort = currentPort || '80';
     }
     
     // Определяем протокол
@@ -66,7 +66,8 @@ interface ApiConfig {
       protocol,
       apiUrl,
       envOverride: !!envApiUrl,
-      savedConfig: savedIp ? `http://${savedIp}:${savedPort}` : null
+      savedConfig: savedIp ? `http://${savedIp}:${savedPort}` : null,
+      environment: getCurrentEnvironment()
     });
     
     return apiUrl;

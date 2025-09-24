@@ -30,6 +30,7 @@ export interface RealMetalsPricingResponse {
   limit: number;
   offset: number;
   records: RealMetalPricingRecord[];
+  is_mock_data?: boolean; // Флаг для отличия моковых данных от реальных
 }
 
 // Кэш для данных
@@ -37,34 +38,41 @@ let cachedData: RealMetalsPricingResponse | null = null;
 let lastFetchTime: number = 0;
 const CACHE_DURATION = 10 * 60 * 1000; // 10 минут
 
-// Функция для получения данных с кэшированием
+// Функция для получения данных с кэшированием и fallback
 export async function fetchRealMetalsPricingData(limit: number = 1000, offset: number = 0): Promise<RealMetalsPricingResponse> {
   const now = Date.now();
   
   // Если данные в кэше и не устарели, возвращаем их
   if (cachedData && (now - lastFetchTime) < CACHE_DURATION) {
-    console.log('Using cached data');
+    console.log('✅ Using cached real data');
     return cachedData;
   }
   
   try {
-    console.log('Fetching fresh data from API...');
+    console.log('🔄 Fetching fresh real data from API...');
     const data = await getMetalsPricingData(limit, offset);
-    cachedData = data;
-    lastFetchTime = now;
-    console.log('Data cached successfully');
+    
+    // Проверяем, что это реальные данные (не моковые)
+    if (!data.is_mock_data) {
+      cachedData = data;
+      lastFetchTime = now;
+      console.log('✅ Real data cached successfully');
+    } else {
+      console.log('⚠️ Received mock data from API, not caching');
+    }
+    
     return data;
   } catch (error) {
-    console.error('Error fetching real metals pricing data:', error);
+    console.error('❌ Error fetching real metals pricing data:', error);
     
     // Возвращаем кэшированные данные в случае ошибки
-    if (cachedData) {
-      console.log('Using cached data due to API error');
+    if (cachedData && !cachedData.is_mock_data) {
+      console.log('✅ Using cached real data due to API error');
       return cachedData;
     }
     
-    // Если нет кэшированных данных, возвращаем fallback данные
-    console.log('Using fallback data');
+    // Если нет кэшированных реальных данных, возвращаем fallback данные
+    console.log('🔄 Using fallback mock data');
     return getFallbackData();
   }
 }
@@ -140,7 +148,8 @@ function getFallbackData(): RealMetalsPricingResponse {
         "производитель": "Сталепромышленная компания",
         "регион": "ЮФО"
       }
-    ]
+    ],
+    is_mock_data: true // Флаг для отличия от реальных данных
   };
 }
 
@@ -164,9 +173,15 @@ export const getFilteredRecords = (
   console.log('🔍 getFilteredRecords called with', records.length, 'records');
   console.log('🔍 Filters:', filters);
   
-  // Временно возвращаем все записи для диагностики
-  console.log('🔍 TEMPORARY: Returning all records for debugging');
-  return records;
+  return records.filter(record => {
+    if (filters.productType !== 'Все виды' && record['вид_продукции'] !== filters.productType) return false;
+    if (filters.warehouse !== 'Все склады' && record['склад'] !== filters.warehouse) return false;
+    if (filters.name && !record['наименование'].toLowerCase().includes(filters.name.toLowerCase())) return false;
+    if (filters.steelGrade !== 'Все марки' && record['марка_стали'] !== filters.steelGrade) return false;
+    if (filters.diameter !== 'Все диаметры' && record['диаметр'] !== filters.diameter) return false;
+    if (filters.gost !== 'Все ГОСТы' && record['ГОСТ'] !== filters.gost) return false;
+    return true;
+  });
 };
 
 export const getAveragePrice = (records: RealMetalPricingRecord[]): number => {
@@ -190,13 +205,11 @@ export const getPriceRange = (records: RealMetalPricingRecord[]): { min: number,
 export const getProblematicTubesFromRealData = (records: RealMetalPricingRecord[]): ProblematicTubeRecord[] => {
   console.log('🔍 getProblematicTubesFromRealData called with', records.length, 'records');
   
-  // Временно показываем все записи для диагностики
-  console.log('🔍 TEMPORARY: Showing all records for debugging');
   const tubeRecords = records;
-  
-  console.log('🔍 Filtered tube records:', tubeRecords.length);
+  console.log('🔍 Processing tube records:', tubeRecords.length);
   
   const avgPrice = getAveragePrice(tubeRecords);
+  console.log('🔍 Average price calculated:', avgPrice);
   
   return tubeRecords.map((record, index) => {
     // Проверяем, что цена существует и является числом

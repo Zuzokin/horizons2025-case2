@@ -65,10 +65,11 @@ services:
       dockerfile: Dockerfile
       args:
         NODE_ENV: production
+
     container_name: horizons_frontend_prod
     environment:
       NODE_ENV: production
-      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:8000}
+
     # Убираем проброс портов для безопасности
     ports: []
     depends_on:
